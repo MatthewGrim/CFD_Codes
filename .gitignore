@@ -1,0 +1,5 @@
+// Ignore generated images
+*.png
+
+// Ignore python compiled code
+*.pyc

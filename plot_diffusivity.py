@@ -15,7 +15,7 @@ from diffusion_model import Diffusion
 def plot_mass_diffusivity_co2():
     """
     This function is used to plot a simple example of calculating the mass diffusivity based
-    on an empircal relationship with temperature
+    on an empirical relationship with temperature
     """
     temperature = np.linspace(300, 310, 1000)
 

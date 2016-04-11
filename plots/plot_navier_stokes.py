@@ -10,6 +10,7 @@ from matplotlib import cm
 
 # Project imports
 from navier_stokes_model import NavierStokes
+from plot_functions import Plot
 
 
 def plot_1d_convection():
@@ -62,33 +63,64 @@ def plot_2d_convection():
 
     u_solution_linear, v_solution_linear = NavierStokes.convection_2d(x, y, t, u_initial, v_initial, linear=True)
 
-    fig = plt.figure(figsize=(13, 10), dpi=100)
-    ax = fig.gca(projection='3d')
-    X, Y = np.meshgrid(x, y)
-    surf1 = ax.plot_surface(X, Y, v_solution_linear[0, :, :], rstride=1, cstride=1)
-    fig.savefig('2d_convection_initial_time.png')
-
-    fig2 = plt.figure(figsize=(13, 10), dpi=100)
-    ax2 = fig2.gca(projection='3d')
-    X, Y = np.meshgrid(x, y)
-    surf2 = ax2.plot_surface(X, Y, v_solution_linear[-1, :, :], rstride=1, cstride=1)
-    fig2.savefig('2d_convection_final_time.png')
+    Plot.plot2d(x, y, v_solution_linear[0, :, :], '2d_convection_initial_time.png')
+    Plot.plot2d(x, y, v_solution_linear[-1, :, :], '2d_convection_final_time.png')
 
     u_solution, v_solution = NavierStokes.convection_2d(x, y, t, u_initial, v_initial, linear=False)
 
-    fig = plt.figure(figsize=(13, 10), dpi=100)
-    ax = fig.gca(projection='3d')
-    X, Y = np.meshgrid(x, y)
-    surf3 = ax.plot_surface(X, Y, u_solution[-1, :, :], rstride=1, cstride=1, cmap=cm.coolwarm)
-    fig.savefig('2d_convection_non_linear_u.png')
+    Plot.plot2d(x, y, u_solution[-1, :, :], '2d_convection_non_linear_u.png')
+    Plot.plot2d(x, y, v_solution[-1, :, :], '2d_convection_non_linear_v.png')
 
-    fig = plt.figure(figsize=(13, 10), dpi=100)
-    ax = fig.gca(projection='3d')
-    X, Y = np.meshgrid(x, y)
-    surf4 = ax.plot_surface(X, Y, v_solution[-1, :, :], rstride=1, cstride=1, cmap=cm.coolwarm)
-    fig.savefig('2d_convection_non_linear_v.png')
+
+def plot_2d_laplace():
+    """
+    Function used to plot a simple solution to the Laplace equation in 2D
+    """
+    nx = 31
+    ny = 31
+    c = 1
+    dx = 2/(nx - 1)
+    dy = 2/(ny - 1)
+
+    u = np.zeros((nx, ny))
+
+    x = np.linspace(0, 2, nx)
+    y = np.linspace(0, 1, ny)
+
+    u[:, -1] = y
+
+    u_sol = NavierStokes.laplace_2d(x, y, u)
+
+    Plot.plot2d(x, y, u, "laplace_2d_initial")
+    Plot.plot2d(x, y, u_sol, "laplace_2d_final")
+
+def plot_2d_poisson():
+    """
+    Function used to plot a simple solution to the Poisson equation in 2D
+    """
+    nx = 50
+    ny = 50
+    xmin = 0
+    xmax = 2
+    ymin = 0
+    ymax = 1
+
+    x = np.linspace(xmin, xmax, nx)
+    y = np.linspace(ymin, ymax, ny)
+    u = np.zeros((nx, ny))
+    b = np.zeros((nx, ny))
+
+    b[nx/4, ny/4] = 100
+    b[3 * nx/4, 3 * ny/4] = -100
+
+    u_sol = NavierStokes.poisson_2d(x, y, u, b)
+
+    Plot.plot2d(x, y, u, "Poisson_initial")
+    Plot.plot2d(x, y, u_sol, "Poisson_final")
 
 
 if __name__ == '__main__':
     # plot_1d_convection()
-    plot_2d_convection()
+    # plot_2d_convection()
+    # plot_2d_laplace()
+    plot_2d_poisson()

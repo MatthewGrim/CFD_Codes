@@ -67,7 +67,8 @@ class NavierStokes(object):
         :param v_initial: the initial y velocity condition to solve for
         :param c: the wave speed
         :param linear: boolean to determin whether the equation is linear or not
-        :return:
+        :return: a 3 dimensional array containing the spatial solution for each
+                time step
         """
 
         assert u_initial.shape == (x_loc.shape[0], y_loc.shape[0])
@@ -121,3 +122,71 @@ class NavierStokes(object):
             i += 1
 
         return u_solution, v_solution
+
+    @staticmethod
+    def laplace_2d(x_loc, y_loc, u):
+        """
+        A function to solve the two dimensional Laplace equation
+
+                        d2u/dx2 + d2u/dy2 = 0
+        :param x_loc: A 1D array of the x coordinates in the system
+        :param y_loc: A 1D array of the y coordinates in the system
+        :param u: A 2D array of variable states in the system
+        :return: A two dimensional array containing the iterative solution to the system given
+                the boundary conditions specified in the function.
+        """
+
+        assert u.shape == (x_loc.shape[0], y_loc.shape[0])
+
+        dx = x_loc[1:] - x_loc[0:-1]
+        dy = y_loc[1:] - y_loc[0:-1]
+
+        u_sol = u.copy()
+        error = 1
+        while error > 1e-3:
+            u = u_sol.copy()
+            u_sol[1:-1, 1:-1] = (dy[0:-1] * dy[1:] * (u_sol[2:, 1:-1] + u_sol[0:-2, 1:-1]) \
+                                + dx[0:-1] * dx[1:] * (u_sol[1:-1, 2:] + u_sol[1:-1, 0:-2])) \
+                                / (2 * (dy[0:-1] * dy[1:] + dx[0:-1] * dx[1:]))
+
+            u_sol[0, :] = 0
+            u_sol[-1, :] = y_loc
+            u_sol[:, 0] = u_sol[:, 1]
+            u_sol[:, -1] = u_sol[:, -2]
+
+            error = np.abs(np.sum(np.abs(u_sol[:]) - np.abs([u])) / np.sum(np.abs(u[:])))
+        return u_sol
+
+    @staticmethod
+    def poisson_2d(x_loc, y_loc, u, b, num_iter):
+        """
+        Function to iteratively solve the Poisson equation:
+                    d2u/dx2 + d2u/dy2 = b
+
+        :param x_loc: location of x positions
+        :param y_loc: location of y positions
+        :param u: state variable being iteratively solved
+        :param b: source term
+        :param num_iter: number of iterations made before returning solution
+        :return: a 2D array giving the solution for the boundary conditions specified in this
+                function
+        """
+        assert u.shape == (x_loc.shape[0], y_loc.shape[0])
+        assert b.shape == (x_loc.shape[0], y_loc.shape[0])
+
+        dx = x_loc[1:] - x_loc[0:-1]
+        dy = y_loc[1:] - y_loc[0:-1]
+
+        u_sol = u.copy()
+        for i in range(num_iter):
+            u_sol[1:-1, 1:-1] = (dy[0:-1] * dy[1:] * (u_sol[2:, 1:-1] + u_sol[0:-2, 1:-1]) \
+                                + dx[0:-1] * dx[1:] * (u_sol[1:-1, 2:] + u_sol[1:-1, 0:-2]) \
+                                 - (dy[0:-1] * dy[1:] * dx[0:-1] * dx[1:] * b[1:-1, 1:-1])) \
+                                / (2 * (dy[0:-1] * dy[1:] + dx[0:-1] * dx[1:]))
+
+            u_sol[0, :] = 0
+            u_sol[-1, :] = 0
+            u_sol[:, 0] = 0
+            u_sol[:, -1] = 0
+
+        return u_sol

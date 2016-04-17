@@ -158,7 +158,7 @@ class NavierStokes(object):
         return u_sol
 
     @staticmethod
-    def poisson_2d(x_loc, y_loc, u, b, num_iter):
+    def poisson_2d(x_loc, y_loc, u, b, num_iter, u_x_min=0, u_x_max=0, u_y_min=0, u_y_max=0):
         """
         Function to iteratively solve the Poisson equation:
                     d2u/dx2 + d2u/dy2 = b
@@ -184,9 +184,87 @@ class NavierStokes(object):
                                  - (dy[0:-1] * dy[1:] * dx[0:-1] * dx[1:] * b[1:-1, 1:-1])) \
                                 / (2 * (dy[0:-1] * dy[1:] + dx[0:-1] * dx[1:]))
 
-            u_sol[0, :] = 0
-            u_sol[-1, :] = 0
-            u_sol[:, 0] = 0
-            u_sol[:, -1] = 0
+            u_sol[0, :] = u_x_min
+            u_sol[-1, :] = u_x_max
+            u_sol[:, 0] = u_y_min
+            u_sol[:, -1] = u_y_max
 
         return u_sol
+
+    @staticmethod
+    def cavity_flow(x_loc, y_loc, time_steps, u, v, p, rho, nu, nit):
+        """
+        Function to calculate the flow within a cavity using standard N-S equations
+        :param x_loc: locations of x positions within mesh in a 1D array.
+        :param y_loc: locations of y positions within mesh in a 1D array.
+        :param time_steps: the time steps specified for the simulation in a 1D array/
+        :param u: velocities at grid points in the x direction in a 2D array.
+        :param v: velocities at grid points in the y direction in a 2D array.
+        :param p: pressures at grid points in a 2D array.
+        :param rho: density of the incompressible fluid.
+        :param nu: viscosity of the fluid.
+        :param nit: number of iterations within the poisson equation solution to the
+                    pressure field.
+        :return: u and v velocity fields once the solutions has converged to a steady
+                state.
+        """
+
+        assert u.shape == (x_loc.shape[0], y_loc.shape[0])
+        assert v.shape == (x_loc.shape[0], y_loc.shape[0])
+
+        dt = time_steps[1:] - time_steps[0:-1]
+        dx = x_loc[1:] - x_loc[0:-1]
+        dy = y_loc[1:] - y_loc[0:-1]
+
+        b = np.zeros((x_loc.shape[0], y_loc.shape[0]))
+        i = 0
+        u_sol = u.copy()
+        v_sol = v.copy()
+        p_sol = p.copy()
+        while i < dt.shape[0]:
+            # Get new iteration fields
+            u = u_sol.copy()
+            v = v_sol.copy()
+            p = p_sol.copy()
+
+            # Get b field for poisson equation
+            b[1:-1, 1:-1] = (1 / dt[i]) * ((u[2:, 1:-1] - u[0:-2, 1:-1]) \
+                            / (2 * dx[0:-1]) + (v[1:-1, 2:] - v[1:-1, 0:-2]) / (2 * dy[0:-1])) \
+                            - \
+                            ((u[2:, 1:-1] - u[0:-2, 1:-1]) ** 2) / (4 * dx[0:-1] ** 2) \
+                            - (u[1:-1, 2:] - u[1:-1, 0:-2]) * (v[2:, 1:-1] - v[0:-2, 1:-1]) \
+                            / (4 * dx[0:-1] * dy[0:-1]) \
+                            - ((v[1:-1, 2:] - v[1:-1, 0:-2]) ** 2) / (4 * dy[0:-1] ** 2)
+
+            # apply poisson equation
+            p_sol = NavierStokes.poisson_2d(x_loc, y_loc, p, b, nit, p[1, :], p[-2, :],
+                                            p[:, 1], 0)
+
+            # solve velocity field
+            u_sol[1:-1, 1:-1] = u[1:-1, 1:-1] - \
+                                u[1:-1, 1:-1] * (dt[i]) / (dx[0:-1]) * (u[1:-1, 1:-1] - u[0:-2, 1:-1]) \
+                                - v[1:-1, 1:-1] * (dt[i]) / (dy[0:-1]) * (u[1:-1, 1:-1] - u[1:-1, 0:-2]) \
+                                - dt[i] * (p[2:, 1:-1] - p[0:-2, 1:-1]) / (rho * 2 * dx[0:-1]) \
+                                + nu * (dt[i]/(dx[0:-1] ** 2) * (u[2:, 1:-1] - 2 * u[1:-1, 1:-1] + u[0:-2, 1:-1]) \
+                                + (dt[i]/(dy[0:-1] ** 2)) * (u[1:-1, 2:] - 2 * u[1:-1, 1:-1] + u[1:-1, 0:-2]))
+
+            v_sol[1:-1, 1:-1] = v[1:-1, 1:-1] - \
+                                u[1:-1, 1:-1] * (dt[i]) / (dx[0:-1]) * (v[1:-1, 1:-1] - v[0:-2, 1:-1]) \
+                                - v[1:-1, 1:-1] * (dt[i]) / (dy[0:-1]) * (v[1:-1, 1:-1] - v[1:-1, 0:-2]) \
+                                - dt[i] * (p[1:-1, 2:] - p[1:-1, 0:-2]) / (rho * 2 * dy[0:-1]) \
+                                + nu * (dt[i]/(dx[0:-1] ** 2) * (v[2:, 1:-1] - 2 * v[1:-1, 1:-1] + v[0:-2, 1:-1]) \
+                                + (dt[i]/(dy[0:-1] ** 2)) * (v[1:-1, 2:] - 2 * v[1:-1, 1:-1] + v[1:-1, 0:-2]))
+
+            # B.Cs for cavity flow
+            u_sol[0, :] = 0
+            u_sol[:, 0] = 0
+            u_sol[:, -1] = 1
+            u_sol[-1, :] = 0
+            v_sol[0, :] = 0
+            v_sol[-1, :] = 0
+            v_sol[:, 0] = 0
+            v_sol[:, -1] = 0
+
+            i += 1
+
+        return u_sol, v_sol, p_sol

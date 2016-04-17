@@ -100,6 +100,7 @@ def plot_2d_poisson():
     """
     nx = 50
     ny = 50
+    nit = 100
     xmin = 0
     xmax = 2
     ymin = 0
@@ -113,14 +114,45 @@ def plot_2d_poisson():
     b[nx/4, ny/4] = 100
     b[3 * nx/4, 3 * ny/4] = -100
 
-    u_sol = NavierStokes.poisson_2d(x, y, u, b)
+    u_sol = NavierStokes.poisson_2d(x, y, u, b, nit)
 
     Plot.plot2d(x, y, u, "Poisson_initial")
     Plot.plot2d(x, y, u_sol, "Poisson_final")
 
+def plot_cavity_flow():
+    """
+    Function used to plot a simple solution to the cavity flow simulation in the Navier Stokes
+    static simulation class
+    """
+    nx = 41
+    ny = 41
+    nt = 1000
+    nit = 50
+    c = 1
+    x = np.linspace(0, 2, nx)
+    y = np.linspace(0, 2, ny)
+
+    # Physical Parameters
+    rho = 100
+    nu = 0.1
+    dt = 0.001
+
+    time_steps = np.linspace(0, dt * nt, nt)
+
+    u = np.zeros((nx, ny))
+    v = np.zeros((nx, ny))
+    p = np.zeros((nx, ny))
+
+    u, v, p = NavierStokes.cavity_flow(x, y, time_steps, u, v, p, rho, nu, nit)
+
+    u = np.transpose(u)
+    v = np.transpose(v)
+    p = np.transpose(p)
+    Plot.plot2d_vector(x, y, p, u, v, 'Cavity_Flow')
 
 if __name__ == '__main__':
     # plot_1d_convection()
     # plot_2d_convection()
     # plot_2d_laplace()
-    plot_2d_poisson()
+    # plot_2d_poisson()
+    plot_cavity_flow()

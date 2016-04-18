@@ -158,7 +158,8 @@ class NavierStokes(object):
         return u_sol
 
     @staticmethod
-    def poisson_2d(x_loc, y_loc, u, b, num_iter, u_x_min=0, u_x_max=0, u_y_min=0, u_y_max=0):
+    def poisson_2d(x_loc, y_loc, u, b, num_iter, u_x_min=0, u_x_max=0, u_y_min=0, u_y_max=0,
+                   periodic_x=False, periodic_y=False, wall_x=False, wall_y=False):
         """
         Function to iteratively solve the Poisson equation:
                     d2u/dx2 + d2u/dy2 = b
@@ -173,6 +174,8 @@ class NavierStokes(object):
         """
         assert u.shape == (x_loc.shape[0], y_loc.shape[0])
         assert b.shape == (x_loc.shape[0], y_loc.shape[0])
+        assert not (periodic_x and wall_x)
+        assert not (periodic_y and wall_y)
 
         dx = x_loc[1:] - x_loc[0:-1]
         dy = y_loc[1:] - y_loc[0:-1]
@@ -183,11 +186,38 @@ class NavierStokes(object):
                                 + dx[0:-1] * dx[1:] * (u_sol[1:-1, 2:] + u_sol[1:-1, 0:-2]) \
                                  - (dy[0:-1] * dy[1:] * dx[0:-1] * dx[1:] * b[1:-1, 1:-1])) \
                                 / (2 * (dy[0:-1] * dy[1:] + dx[0:-1] * dx[1:]))
+            # Apply Boundary Conditions
+            if periodic_x:
+                u_sol[0, 1:-1] = (dy[0:-1] * dy[1:] * (u_sol[1, 1:-1] + u_sol[-1, 1:-1]) \
+                                    + dx[0:-1] * dx[1:] * (u_sol[0, 2:] + u_sol[0, 0:-2]) \
+                                     - (dy[0:-1] * dy[1:] * dx[0] * dx[1] * b[0, 1:-1])) \
+                                    / (2 * (dy[0:-1] * dy[1:] + dx[0] * dx[1]))
+                u_sol[-1, 1:-1] = (dy[0:-1] * dy[1:] * (u_sol[0, 1:-1] + u_sol[-2, 1:-1]) \
+                                    + dx[0] * dx[1] * (u_sol[-1, 2:] + u_sol[-1, 0:-2]) \
+                                     - (dy[0:-1] * dy[1:] * dx[0] * dx[1] * b[-1, 1:-1])) \
+                                    / (2 * (dy[0:-1] * dy[1:] + dx[0] * dx[1]))
+            elif wall_x:
+                u_sol[0, 1:-1] = u_sol[1, 1:-1]
+                u_sol[-1, 1:-1] = u_sol[-2, 1:-1]
+            else:
+                u_sol[0, :] = u_x_min
+                u_sol[-1, :] = u_x_max
 
-            u_sol[0, :] = u_x_min
-            u_sol[-1, :] = u_x_max
-            u_sol[:, 0] = u_y_min
-            u_sol[:, -1] = u_y_max
+            if periodic_y:
+                u_sol[1:-1, 0] = (dy[0] * dy[1] * (u_sol[2:, 0] + u_sol[0:-2, 0]) \
+                                    + dx[0:-1] * dx[1:] * (u_sol[1:-1, 1] + u_sol[1:-1, -1]) \
+                                     - (dy[0] * dy[1] * dx[0:-1] * dx[1:] * b[1:-1, 0])) \
+                                    / (2 * (dy[0] * dy[1] + dx[0:-1] * dx[1:]))
+                u_sol[1:-1, -1] = (dy[-2] * dy[-1] * (u_sol[2:, -1] + u_sol[0:-2, -1]) \
+                                    + dx[0:-1] * dx[1:] * (u_sol[1:-1, 0] + u_sol[1:-1, -2]) \
+                                     - (dy[-2] * dy[-1] * dx[0:-1] * dx[1:] * b[1:-1, -1])) \
+                                    / (2 * (dy[-2] * dy[-1] + dx[0:-1] * dx[1:]))
+            elif wall_y:
+                u_sol[1:-1, 0] = u_sol[1:-1, 1]
+                u_sol[1:-1, -1] = u_sol[1:-1, -2]
+            else:
+                u_sol[:, 0] = u_y_min
+                u_sol[:, -1] = u_y_max
 
         return u_sol
 
@@ -267,4 +297,125 @@ class NavierStokes(object):
 
             i += 1
 
+        return u_sol, v_sol, p_sol
+
+    @staticmethod
+    def channel_flow(x_loc, y_loc, error, dt, u, v, p, rho, nu, nit, F):
+        """
+        Function to calculate Poisseulle flow
+        :param x_loc: 1D array of x locations within the grid.
+        :param y_loc: 1D array of y locations within the grid.
+        :param error: Tolerance used in while loop for velocities to evaluate convergence.
+        :param dt: Float representing the time step in the simulation.
+        :param u: 2D array of x velocities in the grid cells.
+        :param v: 2D array of y velocities in the grid cells.
+        :param p: 2D array of pressure perturbations from steady state values in the grid cells.
+        :param rho: Float representing density.
+        :param nu: Float representing viscosity.
+        :param nit: Integer representing the number of iterations within the Poisson Pressure
+                    calculation.
+        :param F: Steady state pressure gradient
+        :return: 3 two-dimensional arrays u_sol, v_sol and p_sol
+        """
+        assert u.shape == (x_loc.shape[0], y_loc.shape[0])
+        assert v.shape == (x_loc.shape[0], y_loc.shape[0])
+
+        dx = x_loc[1:] - x_loc[0:-1]
+        dy = y_loc[1:] - y_loc[0:-1]
+
+        b = np.zeros((x_loc.shape[0], y_loc.shape[0]))
+        u_diff = 1
+        num_it = 0
+        u_sol = u.copy()
+        v_sol = v.copy()
+        p_sol = p.copy()
+        while u_diff > error:
+            u = u_sol.copy()
+            v = v_sol.copy()
+            p = p_sol.copy()
+
+            # Calculate b term in periodic poisson calculation
+            b[1:-1, 1:-1] = (1 / dt) * ((u[2:, 1:-1] - u[0:-2, 1:-1]) \
+                            / (2 * dx[0:-1]) + (v[1:-1, 2:] - v[1:-1, 0:-2]) / (2 * dy[0:-1])) \
+                            - \
+                            ((u[2:, 1:-1] - u[0:-2, 1:-1]) ** 2) / (4 * dx[0:-1] ** 2) \
+                            - (u[1:-1, 2:] - u[1:-1, 0:-2]) * (v[2:, 1:-1] - v[0:-2, 1:-1]) \
+                            / (4 * dx[0:-1] * dy[0:-1]) \
+                            - ((v[1:-1, 2:] - v[1:-1, 0:-2]) ** 2) / (4 * dy[0:-1] ** 2)
+
+            # Solve boundary conditions of b
+            b[0, 1:-1] = (1 / dt) * ((u[1, 1:-1] - u[-1, 1:-1]) \
+                            / (2 * dx[-1]) + (v[0, 2:] - v[0, 0:-2]) / (2 * dy[-1])) \
+                            - \
+                            ((u[1, 1:-1] - u[-1, 1:-1]) ** 2) / (4 * dx[-1] ** 2) \
+                            - (u[0, 2:] - u[0, 0:-2]) * (v[1, 1:-1] - v[-1, 1:-1]) \
+                            / (4 * dx[-1] * dy[-1]) \
+                            - ((v[0, 2:] - v[0, 0:-2]) ** 2) / (4 * dy[-1] ** 2)
+
+            b[-1, 1:-1] = (1 / dt) * ((u[0, 1:-1] - u[-2, 1:-1]) \
+                            / (2 * dx[-1]) + (v[-1, 2:] - v[-1, 0:-2]) / (2 * dy[-1])) \
+                            - \
+                            ((u[0, 1:-1] - u[-2, 1:-1]) ** 2) / (4 * dx[-1] ** 2) \
+                            - (u[-1, 2:] - u[-1, 0:-2]) * (v[0, 1:-1] - v[-2, 1:-1]) \
+                            / (4 * dx[-1] * dy[-1]) \
+                            - ((v[-1, 2:] - v[-1, 0:-2]) ** 2) / (4 * dy[-1] ** 2)
+
+            # Calculate periodic poisson solution to pressure
+            p_sol = NavierStokes.poisson_2d(x_loc, y_loc, p, b, nit, periodic_x=True, wall_y=True)
+
+            # Calculate velocities
+            u_sol[1:-1, 1:-1] = u[1:-1, 1:-1] - \
+                                u[1:-1, 1:-1] * dt / (dx[0:-1]) * (u[1:-1, 1:-1] - u[0:-2, 1:-1]) \
+                                - v[1:-1, 1:-1] * dt / (dy[0:-1]) * (u[1:-1, 1:-1] - u[1:-1, 0:-2]) \
+                                - dt * (p[2:, 1:-1] - p[0:-2, 1:-1]) / (rho * 2 * dx[0:-1]) \
+                                + nu * (dt/(dx[0:-1] ** 2) * (u[2:, 1:-1] - 2 * u[1:-1, 1:-1] + u[0:-2, 1:-1]) \
+                                + (dt/(dy[0:-1] ** 2)) * (u[1:-1, 2:] - 2 * u[1:-1, 1:-1] + u[1:-1, 0:-2])) + F*dt
+
+            v_sol[1:-1, 1:-1] = v[1:-1, 1:-1] - \
+                                u[1:-1, 1:-1] * dt / (dx[0:-1]) * (v[1:-1, 1:-1] - v[0:-2, 1:-1]) \
+                                - v[1:-1, 1:-1] * dt / (dy[0:-1]) * (v[1:-1, 1:-1] - v[1:-1, 0:-2]) \
+                                - dt * (p[1:-1, 2:] - p[1:-1, 0:-2]) / (rho * 2 * dy[0:-1]) \
+                                + nu * (dt/(dx[0:-1] ** 2) * (v[2:, 1:-1] - 2 * v[1:-1, 1:-1] + v[0:-2, 1:-1]) \
+                                + (dt/(dy[0:-1] ** 2)) * (v[1:-1, 2:] - 2 * v[1:-1, 1:-1] + v[1:-1, 0:-2]))
+
+            # B.Cs for channel flow
+            u_sol[0, 1:-1] = u[0, 1:-1] - \
+                                u[0, 1:-1] * dt / (dx[0]) * (u[0, 1:-1] - u[-1, 1:-1]) \
+                                - v[0, 1:-1] * dt / (dy[0:-1]) * (u[0, 1:-1] - u[0, 0:-2]) \
+                                - dt * (p[1, 1:-1] - p[-1, 1:-1]) / (rho * 2 * dx[0]) \
+                                + nu * (dt/(dx[0] ** 2) * (u[1, 1:-1] - 2 * u[0, 1:-1] + u[-1, 1:-1]) \
+                                + (dt/(dy[0:-1] ** 2)) * (u[0, 2:] - 2 * u[0, 1:-1] + u[0, 0:-2])) + F*dt
+
+            u_sol[-1, 1:-1] = u[-1, 1:-1] - \
+                                u[-1, 1:-1] * dt / (dx[-1]) * (u[-1, 1:-1] - u[-2, 1:-1]) \
+                                - v[-1, 1:-1] * dt / (dy[0:-1]) * (u[-1, 1:-1] - u[-1, 0:-2]) \
+                                - dt * (p[0, 1:-1] - p[-2, 1:-1]) / (rho * 2 * dx[-1]) \
+                                + nu * (dt/(dx[-1] ** 2) * (u[0, 1:-1] - 2 * u[-1, 1:-1] + u[-2, 1:-1]) \
+                                + (dt/(dy[0:-1] ** 2)) * (u[-1, 2:] - 2 * u[-1, 1:-1] + u[-1, 0:-2])) + F*dt
+
+            v_sol[0, 1:-1] = v[0, 1:-1] - \
+                                u[0, 1:-1] * dt / (dx[0]) * (v[0, 1:-1] - v[-1, 1:-1]) \
+                                - v[0, 1:-1] * dt / (dy[0:-1]) * (v[0, 1:-1] - v[0, 0:-2]) \
+                                - dt * (p[0, 2:] - p[0, 0:-2]) / (rho * 2 * dy[0:-1]) \
+                                + nu * (dt/(dx[0] ** 2) * (v[1, 1:-1] - 2 * v[0, 1:-1] + v[-1, 1:-1]) \
+                                + (dt/(dy[0:-1] ** 2)) * (v[0, 2:] - 2 * v[0, 1:-1] + v[0, 0:-2]))
+
+            v_sol[-1, 1:-1] = v[-1, 1:-1] - \
+                                u[-1, 1:-1] * dt / (dx[-1]) * (v[-1, 1:-1] - v[-2, 1:-1]) \
+                                - v[-1, 1:-1] * dt / (dy[0:-1]) * (v[-1, 1:-1] - v[-1, 0:-2]) \
+                                - dt * (p[-1, 2:] - p[-1, 0:-2]) / (rho * 2 * dy[0:-1]) \
+                                + nu * (dt/(dx[-1] ** 2) * (v[0, 1:-1] - 2 * v[-1, 1:-1] + v[-2, 1:-1]) \
+                                + (dt/(dy[0:-1] ** 2)) * (v[-1, 2:] - 2 * v[-1, 1:-1] + v[-1, 0:-2]))
+
+            u_sol[:, 0] = 0
+            u_sol[:, -1] = 0
+            v_sol[:, 0] = 0
+            v_sol[:, -1] = 0
+
+            # Calculate difference between solutions
+            u_diff = np.abs(np.sum(np.sqrt(u_sol**2 + v_sol**2)) - np.sum(np.sqrt(u ** 2 + v ** 2)))/u.size
+
+            num_it += 1
+
+        print num_it
         return u_sol, v_sol, p_sol

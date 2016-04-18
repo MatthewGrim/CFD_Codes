@@ -94,6 +94,7 @@ def plot_2d_laplace():
     Plot.plot2d(x, y, u, "laplace_2d_initial")
     Plot.plot2d(x, y, u_sol, "laplace_2d_final")
 
+
 def plot_2d_poisson():
     """
     Function used to plot a simple solution to the Poisson equation in 2D
@@ -118,6 +119,7 @@ def plot_2d_poisson():
 
     Plot.plot2d(x, y, u, "Poisson_initial")
     Plot.plot2d(x, y, u_sol, "Poisson_final")
+
 
 def plot_cavity_flow():
     """
@@ -148,11 +150,40 @@ def plot_cavity_flow():
     u = np.transpose(u)
     v = np.transpose(v)
     p = np.transpose(p)
-    Plot.plot2d_vector(x, y, p, u, v, 'Cavity_Flow')
+    Plot.plot2d_vector_contour(x, y, p, u, v, 'Cavity_Flow')
+
+
+def plot_channel_flow():
+    """
+    A function to plot a simple solution to channel flow
+    """
+    nx = 41
+    ny = 41
+    nit = 50
+    x = np.linspace(0, 2, nx)
+    y = np.linspace(0, 2, ny)
+    error = 1e-6
+
+    rho = 1
+    nu = 0.1
+    F = 1
+    dt = 0.01
+
+    u = np.zeros((nx, ny))
+    v = np.zeros((nx, ny))
+    p = np.zeros((nx, ny))
+
+    u, v, p = NavierStokes.channel_flow(x, y, error, dt, u, v, p, rho, nu, nit, F)
+
+    u = np.transpose(u)
+    v = np.transpose(v)
+
+    Plot.plot2d_vector(x, y, u, v, "Channel_Flow")
 
 if __name__ == '__main__':
     # plot_1d_convection()
     # plot_2d_convection()
     # plot_2d_laplace()
     # plot_2d_poisson()
-    plot_cavity_flow()
+    # plot_cavity_flow()
+    plot_channel_flow()

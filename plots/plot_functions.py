@@ -32,7 +32,26 @@ class Plot(object):
         fig.savefig(name)
 
     @staticmethod
-    def plot2d_vector(x, y, p, u, v, name):
+    def plot2d_vector(x, y, u, v, name):
+        """
+        Function to plot 2D data on a contour plot with vectors.
+
+        :param x: x locations of plotted points
+        :param y: y locations of plotted points
+        :param u: Vector variable name for x direction
+        :param v: Vector variable name for y direction
+        :param name: A string containing the name of the file
+        """
+        X, Y = np.meshgrid(x, y)
+
+        fig = plt.figure(figsize=(13,10), dpi=100)
+        plt.quiver(X[::2, ::2], Y[::2, ::2], u[::2, ::2], v[::2, ::2])
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        fig.savefig(name)
+
+    @staticmethod
+    def plot2d_vector_contour(x, y, p, u, v, name):
         """
         Function to plot 2D data on a contour plot with vectors.
 

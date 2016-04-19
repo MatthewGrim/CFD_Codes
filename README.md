@@ -2,3 +2,8 @@
 This project contains python code I wrote to further my understanding of and ability to implement the numerical methods used in
 computational fluid dynamics. The project currently consists of static classes used to model different physical phenomena in fluid
 systems. 
+
+Some of the work in this repository is based on tutorials and numerical methods I have found online or come across in my studies,
+the main contributors are listed below:
+
+1. Lorena A. Barba - CFD Python: 12 Steps to Navier-Stokes

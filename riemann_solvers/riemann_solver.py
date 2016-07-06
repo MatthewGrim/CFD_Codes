@@ -6,6 +6,10 @@ This file contains a class used to model a numerical solution to Riemann problem
 follows that in Toro - Chapter 4.
 """
 
+import numpy as np
+
+from thermodynamic_state import ThermodynamicState
+
 
 class RiemannSolver(object):
     def __init__(self, gamma):
@@ -26,9 +30,9 @@ class RiemannSolver(object):
         
         :return: the coefficient B for the solution of f 
         """
-        return (self.gamma + 1) / (self.gamma - 1) * pressure
+        return (self.gamma - 1) / (self.gamma + 1) * pressure
     
-    def __f(self, p_star, p_outer, rho_outer, a_outer):
+    def __f(self, p_star, outer):
         """
         p_star: pressure in the star region
         p_outer: pressure outside star region on either the right or left
@@ -38,24 +42,23 @@ class RiemannSolver(object):
         :return: the solution to the function f in the iterative scheme for calculating p star 
         """
         
-        if (p_star <= p_outer):
-            return 2.0 * a_outer / (self.gamma - 1) * \
-                   ((p_star / p_outer) ** ((self.gamma - 1) / (2 * self.gamma)) - 1)
+        if p_star <= outer.p:
+            return 2.0 * outer.a / (self.gamma - 1) * \
+                   ((p_star / outer.p) ** ((self.gamma - 1) / (2 * self.gamma)) - 1)
         else:
-            A = self.__get_A(rho_outer)
-            B = self.__get_B(p_outer)
+            A = self.__get_A(outer.rho)
+            B = self.__get_B(outer.p)
             
-            return (p_star - p_outer) * (A / (p_star + B)) ** 0.5            
+            return (p_star - outer.p) * (A / (p_star + B)) ** 0.5
 
-    def __f_total(self, u_left, u_right, p_star, p_left, rho_left, a_left,
-                   p_right, rho_right, a_right):
+    def __f_total(self, p_star, left, right):
 
-        f_r = self.__f(p_star, p_right, rho_right, a_right)
-        f_l = self.__f(p_star, p_left, rho_left, a_left)
+        f_r = self.__f(p_star, right)
+        f_l = self.__f(p_star, left)
 
-        return f_r + f_l + (u_right - u_left)
+        return f_r + f_l + (right.u - left.u)
 
-    def __f_derivative(self, p_star, p_outer, rho_outer, a_outer):
+    def __f_derivative(self, p_star, outer):
         """
         :param p_star:
         :param p_outer:
@@ -65,90 +68,106 @@ class RiemannSolver(object):
         :return: the derivative of the function f in the iterative scheme for calculating p star
         """
 
-        if (p_star <= p_outer):
-            return 1.0 / (rho_outer * a_outer) * (p_star / p_outer) ** (-(self.gamma + 1) / (2 * self.gamma))
+        if p_star <= outer.p:
+            return 1.0 / (outer.rho * outer.a) * (p_star / outer.p) ** (-(self.gamma + 1) / (2 * self.gamma))
         else:
-            A = self.__get_A(rho_outer)
-            B = self.__get_B(p_outer)
+            A = self.__get_A(outer.rho)
+            B = self.__get_B(outer.p)
 
-            return (1 - (p_star - p_outer) / (2 * (B + p_star))) * (A / (p_star + B)) ** 0.5
+            return (1 - (p_star - outer.p) / (2 * (B + p_star))) * (A / (p_star + B)) ** 0.5
 
-    def __f_total_derivative(self, p_star, p_left, rho_left, a_left,
-                             p_right, rho_right, a_right):
+    def __f_total_derivative(self, p_star, left, right):
 
-        f_deriv_r = self.__f_derivative(p_star, p_right, rho_right, a_right)
-        f_deriv_l = self.__f_derivative(p_star, p_left, rho_left, a_left)
+        f_deriv_r = self.__f_derivative(p_star, right)
+        f_deriv_l = self.__f_derivative(p_star, left)
 
         return f_deriv_r + f_deriv_l
 
-    def __estimate_p_star(self, p_left, a_left, p_right, a_right, u_left, u_right):
+    def __estimate_p_star(self, left, right):
         """
 
         :return: an estimate for p_star used in the iterative scheme
         """
 
-        numerator = a_left + a_right - 0.5 * (self.gamma - 1) * (u_right - u_left)
-        denominator = (a_left / p_left) ** ((self.gamma - 1) / (2 * self.gamma)) + \
-                      (a_right / p_right) ** ((self.gamma - 1) / (2 * self.gamma))
+        numerator = left.a + right.a - 0.5 * (self.gamma - 1) * (right.u - left.u)
+        denominator = left.a / (left.p ** ((self.gamma - 1) / (2 * self.gamma))) + \
+                      right.a / (right.p ** ((self.gamma - 1) / (2 * self.gamma)))
 
         return (numerator / denominator) ** ((2 * self.gamma) / (self.gamma - 1))
 
-    def __get_p_star(self, p_left, rho_left, a_left,
-                   p_right, rho_right, a_right, u_left, u_right):
+    def __get_p_star(self, left_state, right_state):
         """
 
         :return: the pressure in the star region.
         """
         TOL = 1e-6
 
-        p_sol = self.__estimate_p_star(p_left, a_left, p_right, a_right, u_left, u_right)
+        p_sol = self.__estimate_p_star(left_state, right_state)
         delta = 1.0
-        while (delta > TOL):
-            f_total = self.__f_total(p_sol, p_left, rho_left, a_left, p_right, rho_right, a_right)
-            f_total_derivative = self.__f_total_derivative(p_sol, p_left, rho_left, a_left, p_right, rho_right, a_right)
+        i = 0
+        while delta > TOL:
+            f_total = self.__f_total(p_sol, left_state, right_state)
+            f_total_derivative = self.__f_total_derivative(p_sol, left_state, right_state)
 
+            p_prev = p_sol
             p_sol -= f_total / f_total_derivative
+            delta = np.abs(p_prev - p_sol)
+            i += 1
 
         return p_sol
     
-    def __get_u_star(self, u_left, u_right, p_star, p_left, rho_left, a_left,
-                   p_right, rho_right, a_right):
+    def __get_u_star(self, p_star, left_state, right_state):
         """
 
         :return: the velocity in the star region.
         """
-        
-        return 0.5 * (u_left + u_right) + 0.5 * (self.f(p_star, p_left, rho_left, a_left) +
-                                                 self.f(p_star, p_right, rho_right, a_right))
+
+        return 0.5 * (left_state.u + right_state.u) + 0.5 * (self.__f(p_star, right_state) - self.__f(p_star, left_state))
     
-    def get_star_states(self, u_left, u_right, p_left, rho_left, a_left,
-                   p_right, rho_right, a_right):
+    def get_star_states(self, left_state, right_state):
         """
-        :param u_left: velocity in the left outer region
-        :param u_right: velocity in the right outer region
-        :param p_star: pressure in the star region
-        :param p_left: pressure in the left star region
-        :param rho_left: density in the left outer region
-        :param a_left: sound speed in the left region
-        :param p_right: pressure in the right outer region
-        :param rho_right: density in the right outer region
-        :param a_right: sound speed in the right outer region
+        :param left_state: thermodynamic conditions to the left of IVP
+        :param right_state: thermodynamic conditions to the right of IVP
 
         :return: the star pressure and velocity states
         """
-        assert isinstance(u_left, float)
-        assert isinstance(u_right, float)
-        assert isinstance(p_left, float)
-        assert isinstance(rho_left, float)
-        assert isinstance(a_left, float)
-        assert isinstance(p_right, float)
-        assert isinstance(rho_right, float)
-        assert isinstance(a_left, float)
+        assert isinstance(left_state, ThermodynamicState)
+        assert isinstance(right_state, ThermodynamicState)
 
-        p_star = self.__get_p_star(p_left, rho_left, a_left,
-                                 p_right, rho_right, a_right, u_left, u_right)
+        p_star = self.__get_p_star(left_state, right_state)
         
-        u_star = self.__get_u_star(u_left, u_right, p_star, p_left, rho_left, a_left,
-                                 p_right, rho_right, a_right)
+        u_star = self.__get_u_star(p_star, left_state, right_state)
         
         return p_star, u_star
+
+
+def test_iterative_scheme():
+    """
+    This function runs through the five shock tube problems outlined in Toro - Chapter 4. The results for contact
+    velocity, pressure, and number of iterations should match those on p130-131.
+    """
+    gamma = 1.4
+    p_left = [1.0, 0.4, 1000.0, 0.01, 460.894]
+    rho_left = [1.0, 1.0, 1.0, 1.0, 5.99924]
+    u_left = [0.0, -2.0, 0.0, 0.0, 19.5975]
+    p_right = [0.1, 0.4, 0.01, 100.0, 46.0950]
+    rho_right = [0.125, 1.0, 1.0, 1.0, 5.99242]
+    u_right = [0.0, 2.0, 0.0, 0.0, -6.19633]
+
+    solver = RiemannSolver(1.4)
+    print '*' * 50
+    for i in range(0, 5):
+        print "Riemann Test: " + str(i + 1)
+
+        left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
+        right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
+
+        p_star, u_star = solver.get_star_states(left_state, right_state)
+
+        print "Converged Star Pressure: " + str(p_star)
+        print "Converged Star Velocity: " + str(u_star)
+        print '*' * 50
+
+
+if __name__ == '__main__':
+    test_iterative_scheme()

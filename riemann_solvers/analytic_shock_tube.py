@@ -63,9 +63,9 @@ class ShockTube(object):
                 elif x_start <= x < x_end:
                     assert x < self.membrane_location
                     x_left = self.membrane_location - x
-                    self.rho[i] = rho * (gamma_const1 - gamma_const2 / a * (u - x_left / t)) ** (1 / gamma_const3)
+                    self.rho[i] = rho * (gamma_const1 - gamma_const2 / a * (-u - x_left / t)) ** (1 / gamma_const3)
                     self.u[i] = gamma_const1 * (a + gamma_const3 * u - x_left / t)
-                    self.p[i] = p * (gamma_const1 - gamma_const2 / a * (u - x_left / t)) ** gamma_const4
+                    self.p[i] = p * (gamma_const1 - gamma_const2 / a * (-u - x_left / t)) ** gamma_const4
                 elif x_end <= x < contact_location:
                     self.rho[i] = rho_star
                     self.u[i] = u_star
@@ -122,7 +122,7 @@ class ShockTube(object):
 
             rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
 
-            x_start = self.membrane_location - S * t
+            x_start = self.membrane_location + S * t
             x_end = contact_location
 
             for i, x in enumerate(self.x):

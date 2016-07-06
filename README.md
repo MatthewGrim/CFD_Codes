@@ -7,3 +7,4 @@ Some of the work in this repository is based on tutorials and numerical methods 
 the main contributors are listed below:
 
 1. Lorena A. Barba - CFD Python: 12 Steps to Navier-Stokes
+2. Eleuterio F. Toro - Riemann Solvers and Numerical Methods for Fluid Dynamics

@@ -26,6 +26,7 @@ class ShockTube(object):
         self.rho = np.zeros(num_pts)
         self.u = np.zeros(num_pts)
         self.p = np.zeros(num_pts)
+        self.e = np.zeros(num_pts)
 
     def __set_rarefaction(self, p_star, u_star, t, is_left):
         assert isinstance(is_left, bool)
@@ -42,6 +43,7 @@ class ShockTube(object):
             u = self.left_state.u
             a = self.left_state.a
             p = self.left_state.p
+            e = self.left_state.e
 
             #  Get star density state
             rho_star = rho * (p_star / p) ** (1 / gamma)
@@ -60,16 +62,19 @@ class ShockTube(object):
                     self.rho[i] = rho
                     self.u[i] = u
                     self.p[i] = p
+                    self.e[i] = e
                 elif x_start <= x < x_end:
                     assert x < self.membrane_location
                     x_left = self.membrane_location - x
                     self.rho[i] = rho * (gamma_const1 - gamma_const2 / a * (-u - x_left / t)) ** (1 / gamma_const3)
                     self.u[i] = gamma_const1 * (a + gamma_const3 * u - x_left / t)
                     self.p[i] = p * (gamma_const1 - gamma_const2 / a * (-u - x_left / t)) ** gamma_const4
+                    self.e[i] = self.p[i] / (self.rho[i] * (gamma - 1))
                 elif x_end <= x < contact_location:
                     self.rho[i] = rho_star
                     self.u[i] = u_star
                     self.p[i] = p_star
+                    self.e[i] = p_star / (rho_star * (gamma - 1))
 
         else:
             rho = self.right_state.rho
@@ -94,16 +99,19 @@ class ShockTube(object):
                     self.rho[i] = rho_star
                     self.u[i] = u_star
                     self.p[i] = p_star
+                    self.e[i] = p_star / (rho_star * (gamma - 1))
                 elif x_start <= x < x_end:
                     assert self.membrane_location < x
                     x_right = x - self.membrane_location
                     self.rho[i] = rho * (gamma_const1 - gamma_const2 / a * (u - x_right / t)) ** (1 / gamma_const3)
                     self.u[i] = gamma_const1 * (-a + gamma_const3 * u + x_right / t)
                     self.p[i] = p * (gamma_const1 - gamma_const2 / a * (u - x_right / t)) ** gamma_const4
+                    self.e[i] = self.p[i] / (self.rho[i] * (gamma - 1))
                 elif x >= x_end:
                     self.rho[i] = rho
                     self.u[i] = u
                     self.p[i] = p
+                    self.e[i] = p / (rho * (gamma - 1))
 
     def __set_shock(self, p_star, u_star, t, is_left):
         assert isinstance(is_left, bool)
@@ -127,13 +135,15 @@ class ShockTube(object):
 
             for i, x in enumerate(self.x):
                 if x < x_start:
-                    self.rho[i] = self.left_state.rho
-                    self.u[i] = self.left_state.u
-                    self.p[i] = self.left_state.p
+                    self.rho[i] = rho
+                    self.u[i] = u
+                    self.p[i] = p
+                    self.e[i] = p / (rho * (gamma - 1))
                 elif x_start <= x < x_end:
                     self.rho[i] = rho_star
                     self.u[i] = u_star
                     self.p[i] = p_star
+                    self.e[i] = p_star / (rho_star * (gamma - 1))
         else:
             rho = self.right_state.rho
             u = self.right_state.u
@@ -152,10 +162,12 @@ class ShockTube(object):
                     self.rho[i] = rho_star
                     self.u[i] = u_star
                     self.p[i] = p_star
+                    self.e[i] = p_star / (rho_star * (gamma - 1))
                 elif x > x_end:
-                    self.rho[i] = self.right_state.rho
-                    self.u[i] = self.right_state.u
-                    self.p[i] = self.right_state.p
+                    self.rho[i] = rho
+                    self.u[i] = u
+                    self.p[i] = p
+                    self.e[i] = p / (rho * (gamma - 1))
 
     def __set_left_state(self, p_star, u_star, t):
         if p_star <= self.left_state.p:
@@ -183,7 +195,7 @@ class ShockTube(object):
         self.__set_left_state(p_star, u_star, time)
         self.__set_right_state(p_star, u_star, time)
 
-        return self.x, self.rho, self.u, self.p
+        return self.x, self.rho, self.u, self.p, self.e
 
 
 def test_sod_problems():
@@ -206,21 +218,25 @@ def test_sod_problems():
 
         sod_test = ShockTube(left_state, right_state, 0.5, 1000)
 
-        x_sol, rho_sol, u_sol, p_sol = sod_test.get_solution(t[i])
+        x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(t[i])
 
         title = "Sod Test: {}".format(i + 1)
-
+        num_plts_x = 2
+        num_plts_y = 2
         plt.figure(figsize=(10, 10))
         plt.suptitle(title)
-        plt.subplot(3, 1, 1)
+        plt.subplot(num_plts_x, num_plts_y, 1)
         plt.title("Density")
         plt.plot(x_sol, rho_sol)
-        plt.subplot(3, 1, 2)
+        plt.subplot(num_plts_x, num_plts_y, 2)
         plt.title("Velocity")
         plt.plot(x_sol, u_sol)
-        plt.subplot(3, 1, 3)
+        plt.subplot(num_plts_x, num_plts_y, 3)
         plt.title("Pressure")
         plt.plot(x_sol, p_sol)
+        plt.subplot(num_plts_x, num_plts_y, 4)
+        plt.title("Energy")
+        plt.plot(x_sol, e_sol)
         plt.show()
 
 

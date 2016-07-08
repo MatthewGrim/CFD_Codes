@@ -20,5 +20,6 @@ class ThermodynamicState(object):
         self.p = pressure
         self.rho = density
         self.u = velocity
+        self.e = pressure / (density * (gamma - 1))
 
         self.a = np.sqrt(gamma * pressure / density)

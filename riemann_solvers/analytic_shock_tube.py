@@ -8,11 +8,11 @@ This file contains a class used to generate the 1D analytic solution to the shoc
 import numpy as np
 from matplotlib import pyplot as plt
 
-from thermodynamic_state import ThermodynamicState
-from riemann_solver import RiemannSolver
+from CFD_Projects.riemann_solvers.thermodynamic_state import ThermodynamicState
+from CFD_Projects.riemann_solvers.riemann_solver import RiemannSolver
 
 
-class ShockTube(object):
+class AnalyticShockTube(object):
     def __init__(self, left_state, right_state, membrane_location, num_pts):
         assert isinstance(left_state, ThermodynamicState)
         assert isinstance(right_state, ThermodynamicState)
@@ -216,7 +216,7 @@ def test_sod_problems():
         left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
 
-        sod_test = ShockTube(left_state, right_state, 0.5, 1000)
+        sod_test = AnalyticShockTube(left_state, right_state, 0.5, 1000)
 
         x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(t[i])
 

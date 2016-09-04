@@ -20,6 +20,36 @@ class ThermodynamicState(object):
         self.p = pressure
         self.rho = density
         self.u = velocity
-        self.e = pressure / (density * (gamma - 1))
 
         self.a = np.sqrt(gamma * pressure / density)
+        self.mom = self.u * self.rho
+        self.e_kin = self.rho * self.u * self.u
+        self.e_int = pressure / (density * (gamma - 1))
+
+    def update_states(self, density_flux, momentum_flux, e_flux):
+        """
+        Updates the thermodynamic state of the cell based on conservative fluxes into volume
+
+        :param density_flux
+        :param momentum_flux
+        :param e_flux
+        """
+        assert(isinstance(density_flux, float))
+        assert(isinstance(momentum_flux, float))
+        assert(isinstance(e_flux, float))
+
+        # print "Initial rho: " + str(self.rho)
+
+        self.rho += density_flux
+        self.mom += momentum_flux
+
+        # print "Final rho: " + str(self.rho)
+
+        self.u += self.mom / self.rho
+        self.p *= (self.rho / (self.rho - density_flux)) ** self.gamma
+
+        e_tot = self.e_kin + self.e_int
+        self.e_int = self.p / (self.rho * (self.gamma - 1))
+        self.e_kin = e_tot + e_flux - self.e_int
+
+        self.a = np.sqrt(self.gamma * self.p / self.rho)

@@ -43,7 +43,7 @@ class AnalyticShockTube(object):
             u = self.left_state.u
             a = self.left_state.a
             p = self.left_state.p
-            e = self.left_state.e
+            e = self.left_state.e_int
 
             #  Get star density state
             rho_star = rho * (p_star / p) ** (1 / gamma)

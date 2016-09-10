@@ -64,7 +64,6 @@ class AnalyticShockTube(object):
                     self.p[i] = p
                     self.e[i] = e
                 elif x_start <= x < x_end:
-                    assert x < self.membrane_location
                     x_left = self.membrane_location - x
                     self.rho[i] = rho * (gamma_const1 - gamma_const2 / a * (-u - x_left / t)) ** (1 / gamma_const3)
                     self.u[i] = gamma_const1 * (a + gamma_const3 * u - x_left / t)
@@ -204,19 +203,20 @@ def test_sod_problems():
     velocity, pressure, and number of iterations should match those on p130-131.
     """
     gamma = 1.4
-    p_left = [1.0, 0.4, 1000.0, 0.01, 460.894]
-    rho_left = [1.0, 1.0, 1.0, 1.0, 5.99924]
-    u_left = [0.0, -2.0, 0.0, 0.0, 19.5975]
-    p_right = [0.1, 0.4, 0.01, 100.0, 46.0950]
-    rho_right = [0.125, 1.0, 1.0, 1.0, 5.99242]
-    u_right = [0.0, 2.0, 0.0, 0.0, -6.19633]
-    t = [0.25, 0.15, 0.012, 0.035, 0.035]
+    p_left = [1.0, 0.4, 1000.0, 0.01, 460.894, 1.0]
+    rho_left = [1.0, 1.0, 1.0, 1.0, 5.99924, 1.0]
+    u_left = [0.0, -2.0, 0.0, 0.0, 19.5975, 0.75]
+    p_right = [0.1, 0.4, 0.01, 100.0, 46.0950, 0.1]
+    rho_right = [0.125, 1.0, 1.0, 1.0, 5.99242, 0.125]
+    u_right = [0.0, 2.0, 0.0, 0.0, -6.19633, 0.0]
+    t = [0.25, 0.15, 0.012, 0.035, 0.035, 0.2]
+    x = [0.5, 0.5, 0.5, 0.5, 0.5, 0.3]
 
-    for i in range(0, 5):
+    for i in range(0, 6):
         left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
 
-        sod_test = AnalyticShockTube(left_state, right_state, 0.5, 1000)
+        sod_test = AnalyticShockTube(left_state, right_state, x[i], 1000)
 
         x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(t[i])
 

@@ -46,5 +46,10 @@ class ThermodynamicState(object):
         self.e_kin = e_tot - self.e_int
 
         self.u = (self.mom + momentum_flux) / self.rho
+        u = np.sqrt(self.e_kin * 2.0 / self.rho)
+
+        print self.e_kin
+        print u
+        print self.u
 
         self.a = np.sqrt(self.gamma * self.p / self.rho)

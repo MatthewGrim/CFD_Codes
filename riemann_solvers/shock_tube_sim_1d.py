@@ -69,7 +69,6 @@ class ShockTube1D(object):
 
         max_wave_speed = 0.0
         for i, dens_flux in enumerate(self.density_fluxes):
-
             # Generate left and right states from cell averaged values
             if i == 0:
                 left_state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
@@ -84,97 +83,93 @@ class ShockTube1D(object):
             # Solve Riemann problem for star states
             p_star, u_star = self.solver.get_star_states(left_state, right_state)
 
-            # Calculate rho_star from left state
-            rho = left_state.rho
-            p = left_state.p
-            gamma = left_state.gamma
-            if left_state.p > p_star:
-                rho_star = rho * (p_star / p) ** (1 / gamma)
-            else:
-                rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
-            a_star = np.sqrt(gamma * p_star / rho_star)
-
-            # Get the wave speeds on right
-            right_star_region = True
-            right_region = False
-            if right_state.p >= p_star:
-                wave_right_high = right_state.u + right_state.a
-                wave_right_low = u_star + a_star
-                wave_right_max = wave_right_high
-                if wave_right_low < 0.0:
-                    right_star_region = False
+            # Find state at boundary
+            if u_star < 0:
+                # Consider right wave structures
+                rho = right_state.rho
+                p = right_state.p
+                gamma = right_state.gamma
+                if right_state.p >= p_star:
+                    rho_star = rho * (p_star / p) ** (1 / gamma)
+                    a_star = np.sqrt(gamma * p_star / rho_star)
+                    wave_right_high = right_state.u + right_state.a
+                    wave_right_low = u_star + a_star
                     if wave_right_high < 0.0:
-                        right_region = True
+                        p_flux = right_state.p
+                        rho_flux = right_state.rho
+                        u_flux = right_state.u
+                    else:
+                        if wave_right_low > 0.0:
+                            p_flux = p_star
+                            rho_flux = rho_star
+                            u_flux = u_star
+                        else:
+                            multiplier = ((2.0 / (gamma + 1)) - (gamma - 1) * right_state.u / (right_state.a * (gamma + 1))) ** (2.0 / (gamma - 1.0))
+                            rho_flux = right_state.rho * multiplier
+                            u_flux = (2.0 / (gamma + 1)) * (-right_state.a + (gamma - 1) * right_state.u / 2.0)
+                            p_flux = right_state.p * multiplier
+                else:
+                    rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
+                    wave_right_shock = right_state.u + right_state.a * ((gamma + 1) * p_star / (2 * gamma * right_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
+                    if wave_right_shock < 0.0:
+                        p_flux = right_state.p
+                        rho_flux = right_state.rho
+                        u_flux = right_state.u
+                    else:
+                        p_flux = p_star
+                        rho_flux = rho_star
+                        u_flux = u_star
             else:
-                wave_right_shock = right_state.u + right_state.a * ((gamma + 1) * p_star / (2 * gamma * right_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
-                wave_right_max = wave_right_shock
-                if wave_right_shock < 0.0:
-                    right_star_region = False
-                    right_region = True
-
-            # Get the wave sppeds on the left
-            left_star_region = True
-            left_region = False
-            if left_state.p >= p_star:
-                wave_left_high = left_state.u - left_state.a
-                wave_left_low = u_star - a_star
-                wave_left_max = wave_left_high
-                if wave_left_low > 0.0:
-                    left_star_region = False
+                # Consider left wave structures
+                rho = left_state.rho
+                p = left_state.p
+                gamma = left_state.gamma
+                if left_state.p >= p_star:
+                    rho_star = rho * (p_star / p) ** (1 / gamma)
+                    a_star = np.sqrt(gamma * p_star / rho_star)
+                    wave_left_high = left_state.u - left_state.a
+                    wave_left_low = u_star - a_star
                     if wave_left_high > 0.0:
-                        left_region = True
-            else:
-                wave_left_shock = left_state.u - left_state.a * ((gamma + 1) * p_star / (2 * gamma * left_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
-                wave_left_max = wave_left_shock
-                if wave_left_shock > 0.0:
-                    left_star_region = False
-                    left_region = True
-
-            # Set max wave speed
-            wave_speed = max(np.abs(wave_left_max), np.abs(wave_right_max))
-            if wave_speed > max_wave_speed:
-                max_wave_speed = wave_speed
-
-            # Get the flux velocity from the state at the cell edge
-            if right_region:
-                assert(left_region == False)
-                u_flux = right_state.u
-                rho_flux = right_state.rho
-                p_flux = right_state.p
-            elif left_region:
-                assert(right_region == False)
-                u_flux = left_state.u
-                rho_flux = left_state.rho
-                p_flux = left_state.p
-            elif right_star_region and left_star_region:
-                u_flux = u_star
-                rho_flux = rho_star
-                p_flux = p_star
-            elif left_star_region is False and left_region is False:
-                assert(right_star_region is True)
-                multiplier = ((2.0 / (gamma + 1)) + (gamma - 1) * left_state.u / (left_state.a * (gamma + 1))) ** (2.0 / (gamma - 1.0))
-                rho_flux = left_state.rho * multiplier
-                u_flux = (2.0 / (gamma + 1)) * (left_state.a + (gamma - 1) * left_state.u / 2.0)
-                p_flux = left_state.p * multiplier
-            elif right_star_region is False and right_region is False:
-                assert(left_star_region is True)
-                multiplier = ((2.0 / (gamma + 1)) - (gamma - 1) * right_state.u / (right_state.a * (gamma + 1))) ** (2.0 / (gamma - 1.0))
-                rho_flux = right_state.rho * multiplier
-                u_flux = (2.0 / (gamma + 1)) * (-right_state.a + (gamma - 1) * right_state.u / 2.0)
-                p_flux = right_state.p * multiplier
-            else:
-                raise NotImplementedError("Shouldn't be able to get here!")
+                        p_flux = left_state.p
+                        u_flux = left_state.u
+                        rho_flux = left_state.rho
+                    else:
+                        if wave_left_low < 0.0:
+                            p_flux = p_star
+                            u_flux = u_star
+                            rho_flux = rho_star
+                        else:
+                            multiplier = ((2.0 / (gamma + 1)) + (gamma - 1) * left_state.u / (left_state.a * (gamma + 1))) ** (2.0 / (gamma - 1.0))
+                            rho_flux = left_state.rho * multiplier
+                            u_flux = (2.0 / (gamma + 1)) * (left_state.a + (gamma - 1) * left_state.u / 2.0)
+                            p_flux = left_state.p * multiplier
+                else:
+                    rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
+                    wave_left_shock = left_state.u - left_state.a * ((gamma + 1) * p_star / (2 * gamma * left_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
+                    if wave_left_shock > 0.0:
+                        p_flux = left_state.p
+                        u_flux = left_state.u
+                        rho_flux = left_state.rho
+                    else:
+                        p_flux = p_star
+                        u_flux = u_star
+                        rho_flux = rho_star
 
             # Store fluxes in array
             self.density_fluxes[i] = rho_flux * u_flux
             self.momentum_fluxes[i] = rho_flux * u_flux * u_flux * np.sign(u_flux) + p_flux
-            e_tot = p_flux / (rho_flux * (gamma - 1)) + 0.5 * rho_flux * u_flux * u_flux
+            e_tot = p_flux / (gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
             self.total_energy_fluxes[i] = (p_flux + e_tot) * u_flux
 
-        return max_wave_speed
+    def _calculate_time_step(self):
+        max_wave_speed = 0.0
+        for i, dens in enumerate(self.densities):
+            state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
+            wave_speed = np.abs(state.u) + state.a
+            if (wave_speed > max_wave_speed):
+                max_wave_speed = wave_speed
 
-    def _calculate_time_step(self, max_wave_speed):
-        assert(isinstance(max_wave_speed, float))
+        # print max_wave_speed
         return self.CFL * self.dx / max_wave_speed
 
     def _update_states(self, dt):
@@ -195,9 +190,9 @@ class ShockTube1D(object):
             self.internal_energies[i] = state.e_int
 
     def _evolve_time_step(self):
-        max_wave_speed = self._calculate_fluxes()
+        self._calculate_fluxes()
 
-        dt = self._calculate_time_step(max_wave_speed)
+        dt = self._calculate_time_step()
 
         self._update_states(dt)
 
@@ -208,11 +203,13 @@ class ShockTube1D(object):
 
         times = [ t ]
 
-        # while t < self.final_time:
-        dt = self._evolve_time_step()
+        while t < self.final_time:
+            dt = self._evolve_time_step()
 
-        t += dt
-        times.append(t)
+            # print dt
+
+            t += dt
+            times.append(t)
 
             # title = "Sod Test: {}".format(1)
             # num_plts_x = 2
@@ -244,10 +241,10 @@ def example():
     p_right = [0.1, 0.4, 0.01, 46.0950, 0.01]
     rho_right = [0.125, 1.0, 1.0, 5.99242, 1.0]
     u_right = [0.0, 2.0, 0.0, -6.19633, -19.59745]
-    membrane_location = [0.3, 0.5, 0.5, 0.4, 0.8]
+    membrane_location = [0.5, 0.5, 0.5, 0.4, 0.8]
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
-    for i in range(0, 1):
+    for i in range(0, 5):
         left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
 
@@ -255,7 +252,7 @@ def example():
 
         (times, x, densities, pressures, velocities, internal_energies) = shock_tube_sim.run_sim()
 
-        print "Initial Mass: " + str(shock_tube_sim.mass_conservation)
+        # print "Initial Mass: " + str(shock_tube_sim.mass_conservation)
 
         # print times[-1]
         title = "Sod Test: {}".format(1)

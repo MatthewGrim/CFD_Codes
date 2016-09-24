@@ -38,18 +38,18 @@ class ThermodynamicState(object):
         assert(isinstance(momentum_flux, float))
         assert(isinstance(e_flux, float))
 
-        e_tot = self.e_int + self.e_kin + e_flux
+        e_tot = self.e_int * self.rho + self.e_kin + e_flux
 
         self.rho += density_flux
         self.p *= (self.rho / (self.rho - density_flux)) ** self.gamma
         self.e_int = self.p / (self.rho * (self.gamma - 1))
-        self.e_kin = e_tot - self.e_int
+        self.e_kin = e_tot - self.e_int * self.rho
 
         self.u = (self.mom + momentum_flux) / self.rho
         u = np.sqrt(self.e_kin * 2.0 / self.rho)
 
-        print self.e_kin
-        print u
-        print self.u
+        # print self.e_kin
+        # print u
+        # print self.u
 
         self.a = np.sqrt(self.gamma * self.p / self.rho)

@@ -134,6 +134,10 @@ class RiemannSolver(object):
         assert isinstance(left_state, ThermodynamicState)
         assert isinstance(right_state, ThermodynamicState)
 
+        # Check for vacuum generation
+        if (left_state.a + right_state.a) * 2.0 / (left_state.gamma - 1) <= right_state.a - left_state.u:
+            raise RuntimeError("Vacuum state generated")
+
         p_star = self.__get_p_star(left_state, right_state)
         
         u_star = self.__get_u_star(p_star, left_state, right_state)

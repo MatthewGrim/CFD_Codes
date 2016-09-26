@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 
 from CFD_Projects.riemann_solvers.thermodynamic_state import ThermodynamicState
 from CFD_Projects.riemann_solvers.riemann_solver import RiemannSolver
+from CFD_Projects.riemann_solvers.analytic_shock_tube import AnalyticShockTube
 
 
 class ShockTube1D(object):
@@ -29,45 +30,46 @@ class ShockTube1D(object):
         self.CFL = CFL
         self.solver = RiemannSolver(left_state.gamma)
 
+        # Initialise physical states
         self.densities = list()
         self.pressures = list()
         self.velocities = list()
         self.internal_energies = list()
         self.gamma = left_state.gamma
-        total_mass = 0.0
         for x_loc in self.x:
             if x_loc < membrane_location:
                 self.densities.append(left_state.rho)
                 self.pressures.append(left_state.p)
                 self.velocities.append(left_state.u)
                 self.internal_energies.append(left_state.e_int)
-                total_mass += left_state.rho * self.dx
             else:
                 self.densities.append(right_state.rho)
                 self.pressures.append(right_state.p)
                 self.velocities.append(right_state.u)
                 self.internal_energies.append(right_state.e_int)
-                total_mass += right_state.rho * self.dx
         self.densities = np.asarray(self.densities)
         self.pressures = np.asarray(self.pressures)
         self.velocities = np.asarray(self.velocities)
         self.internal_energies = np.asarray(self.internal_energies)
-        self.mass_conservation = total_mass
 
+        # Initialise conservation checks
+        self.mass_conservation = list()
+        self.momentum_conservation = list()
+        self.energy_conservation = list()
+
+        # Initialise flux arrays
         self.density_fluxes = np.zeros(len(self.densities) + 1)
         self.momentum_fluxes = np.zeros(len(self.densities) + 1)
         self.total_energy_fluxes = np.zeros(len(self.densities) + 1)
 
     def _calculate_fluxes(self):
         """
-        Function used to calculate the fluxes between cells as well as the maximum wave speed in the simulation domain
-        for the CFL condition
+        Function used to calculate the fluxes between cells using a flux based method
         """
         self.density_fluxes = np.zeros(len(self.densities) + 1)
         self.momentum_fluxes = np.zeros(len(self.densities) + 1)
         self.total_energy_fluxes = np.zeros(len(self.densities) + 1)
 
-        max_wave_speed = 0.0
         for i, dens_flux in enumerate(self.density_fluxes):
             # Generate left and right states from cell averaged values
             if i == 0:
@@ -107,7 +109,7 @@ class ShockTube1D(object):
                             multiplier = ((2.0 / (gamma + 1)) - (gamma - 1) * right_state.u / (right_state.a * (gamma + 1))) ** (2.0 / (gamma - 1.0))
                             rho_flux = right_state.rho * multiplier
                             u_flux = (2.0 / (gamma + 1)) * (-right_state.a + (gamma - 1) * right_state.u / 2.0)
-                            p_flux = right_state.p * multiplier
+                            p_flux = right_state.p * multiplier ** gamma
                 else:
                     rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
                     wave_right_shock = right_state.u + right_state.a * ((gamma + 1) * p_star / (2 * gamma * right_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
@@ -142,7 +144,7 @@ class ShockTube1D(object):
                             multiplier = ((2.0 / (gamma + 1)) + (gamma - 1) * left_state.u / (left_state.a * (gamma + 1))) ** (2.0 / (gamma - 1.0))
                             rho_flux = left_state.rho * multiplier
                             u_flux = (2.0 / (gamma + 1)) * (left_state.a + (gamma - 1) * left_state.u / 2.0)
-                            p_flux = left_state.p * multiplier
+                            p_flux = left_state.p * multiplier ** gamma
                 else:
                     rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
                     wave_left_shock = left_state.u - left_state.a * ((gamma + 1) * p_star / (2 * gamma * left_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
@@ -157,11 +159,14 @@ class ShockTube1D(object):
 
             # Store fluxes in array
             self.density_fluxes[i] = rho_flux * u_flux
-            self.momentum_fluxes[i] = rho_flux * u_flux * u_flux * np.sign(u_flux) + p_flux
-            e_tot = p_flux / (gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
+            self.momentum_fluxes[i] = rho_flux * np.abs(u_flux) * u_flux + p_flux
+            e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
             self.total_energy_fluxes[i] = (p_flux + e_tot) * u_flux
 
     def _calculate_time_step(self):
+        """
+        Calculates the time step from the approximation in Toro 6 using max(|u| + a) in the domain
+        """
         max_wave_speed = 0.0
         for i, dens in enumerate(self.densities):
             state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
@@ -173,8 +178,14 @@ class ShockTube1D(object):
         return self.CFL * self.dx / max_wave_speed
 
     def _update_states(self, dt):
+        """
+        Uses the time step and calculated fluxes to update states in each cell
+        """
         assert(isinstance(dt, float))
 
+        total_mass = 0.0
+        total_momentum = 0.0
+        total_energy = 0.0
         for i, state in enumerate(self.densities):
             total_density_flux = (self.density_fluxes[i] - self.density_fluxes[i + 1]) * dt / self.dx
             total_momentum_flux = (self.momentum_fluxes[i] - self.momentum_fluxes[i + 1]) * dt / self.dx
@@ -189,51 +200,42 @@ class ShockTube1D(object):
             self.velocities[i] = state.u
             self.internal_energies[i] = state.e_int
 
+            total_mass += state.rho * self.dx
+            total_momentum += state.mom * self.dx
+            total_energy += state.e_int
+
+        self.mass_conservation.append(total_mass)
+        self.momentum_conservation.append(total_momentum)
+        self.energy_conservation.append(total_energy)
+
     def _evolve_time_step(self):
+        """
+        Function carrying out a single timestep
+        """
         self._calculate_fluxes()
-
         dt = self._calculate_time_step()
-
         self._update_states(dt)
 
         return dt
 
     def run_sim(self):
+        """
+        High level simulation function that runs the simulation - effectively the controller
+        """
         t = 0
-
         times = [ t ]
-
         while t < self.final_time:
             dt = self._evolve_time_step()
-
-            # print dt
-
             t += dt
             times.append(t)
-
-            # title = "Sod Test: {}".format(1)
-            # num_plts_x = 2
-            # num_plts_y = 2
-            # plt.figure(figsize=(10, 10))
-            # plt.suptitle(title)
-            # plt.subplot(num_plts_x, num_plts_y, 1)
-            # plt.title("Density")
-            # plt.plot(self.x, self.densities)
-            # plt.subplot(num_plts_x, num_plts_y, 2)
-            # plt.title("Velocity")
-            # plt.plot(self.x, self.velocities)
-            # plt.subplot(num_plts_x, num_plts_y, 3)
-            # plt.title("Pressure")
-            # plt.plot(self.x, self.pressures)
-            # plt.subplot(num_plts_x, num_plts_y, 4)
-            # plt.title("Internal Energy")
-            # plt.plot(self.x, self.internal_energies)
-            # plt.show()
 
         return times, self.x, self.densities, self.pressures, self.velocities, self.internal_energies
 
 
 def example():
+    """
+    Runs the problems from Toro Chapter 6 to validate this simulation
+    """
     gamma = 1.4
     p_left = [1.0, 0.4, 1000.0, 460.894, 1000.0]
     rho_left = [1.0, 1.0, 1.0, 5.99924, 1.0]
@@ -241,10 +243,10 @@ def example():
     p_right = [0.1, 0.4, 0.01, 46.0950, 0.01]
     rho_right = [0.125, 1.0, 1.0, 5.99242, 1.0]
     u_right = [0.0, 2.0, 0.0, -6.19633, -19.59745]
-    membrane_location = [0.5, 0.5, 0.5, 0.4, 0.8]
+    membrane_location = [0.3, 0.5, 0.5, 0.4, 0.8]
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
-    for i in range(0, 5):
+    for i in range(0, 1):
         left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
 
@@ -252,28 +254,47 @@ def example():
 
         (times, x, densities, pressures, velocities, internal_energies) = shock_tube_sim.run_sim()
 
-        # print "Initial Mass: " + str(shock_tube_sim.mass_conservation)
+        sod_test = AnalyticShockTube(left_state, right_state, membrane_location[i], 1000)
+        x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(times[-1])
 
-        # print times[-1]
         title = "Sod Test: {}".format(1)
         num_plts_x = 2
         num_plts_y = 2
-        plt.figure(figsize=(10, 10))
+        plt.figure(figsize=(20, 10))
         plt.suptitle(title)
         plt.subplot(num_plts_x, num_plts_y, 1)
         plt.title("Density")
-        plt.plot(x, densities)
+        plt.plot(x_sol, rho_sol)
+        plt.scatter(x, densities)
+        plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 2)
         plt.title("Velocity")
-        plt.plot(x, velocities)
+        plt.plot(x_sol, u_sol)
+        plt.scatter(x, velocities)
+        plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 3)
         plt.title("Pressure")
-        plt.plot(x, pressures)
+        plt.plot(x_sol, p_sol)
+        plt.scatter(x, pressures)
+        plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 4)
         plt.title("Internal Energy")
-        plt.plot(x, internal_energies)
+        plt.plot(x_sol, e_sol)
+        plt.xlim([0.0, 1.0])
+        plt.scatter(x, internal_energies)
         plt.show()
 
+        plt.figure(figsize=(20, 10))
+        plt.subplot(1, 3, 1)
+        plt.title("Mass Conservation")
+        plt.plot(times[1:], shock_tube_sim.mass_conservation)
+        plt.subplot(1, 3, 2)
+        plt.title("Momentum Conservation")
+        plt.plot(times[1:], shock_tube_sim.momentum_conservation)
+        plt.subplot(1, 3, 3)
+        plt.title("Energy Conservation")
+        plt.plot(times[1:], shock_tube_sim.energy_conservation)
+        plt.show()
 
 if __name__ == '__main__':
     example()

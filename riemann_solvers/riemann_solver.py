@@ -85,15 +85,44 @@ class RiemannSolver(object):
 
     def __estimate_p_star(self, left, right):
         """
-
         :return: an estimate for p_star used in the iterative scheme
         """
+        #
+        # numerator = left.a + right.a - 0.5 * (self.gamma - 1) * (right.u - left.u)
+        # denominator = left.a / (left.p ** ((self.gamma - 1) / (2 * self.gamma))) + \
+        #               right.a / (right.p ** ((self.gamma - 1) / (2 * self.gamma)))
+        #
+        # return (numerator / denominator) ** ((2 * self.gamma) / (self.gamma - 1))
 
-        numerator = left.a + right.a - 0.5 * (self.gamma - 1) * (right.u - left.u)
-        denominator = left.a / (left.p ** ((self.gamma - 1) / (2 * self.gamma))) + \
-                      right.a / (right.p ** ((self.gamma - 1) / (2 * self.gamma)))
+        gamma = self.gamma
+        G1 = (gamma - 1.0) / (2.0 * gamma)
+        G3 = (2.0 * gamma) / (gamma - 1.0)
+        G4 = 2.0 / (gamma - 1.0)
+        G5 = 2.0 / (gamma + 1.0)
+        G6 = (gamma - 1.0) / (gamma + 1.0)
+        G7 = (gamma - 1.0) / 2.0
+        CUP = 0.25 * (left.rho + right.rho) * (left.a + right.a)
+        PPV = 0.5 * (left.p + right.p) + 0.5 * (left.u - right.u) * CUP
+        PPV = max(1e-6, PPV)
+        PMIN = min(left.p, right.p)
+        PMAX = max(left.p, right.p)
+        QMAX = PMAX / PMIN
 
-        return (numerator / denominator) ** ((2 * self.gamma) / (self.gamma - 1))
+        if QMAX <= 2.0 and PMIN <= PPV <= PMAX:
+            PM = PPV
+        else:
+            if (PPV < PMIN):
+                PQ = (left.p / right.p) ** G1
+                UM = (PQ * left.u / left.a + right.u / right.a + G4 * (PQ - 1.0)) / (PQ / left.a + 1.0 / right.a)
+                PTL = 1.0 + G7 * (left.u - UM) / left.a
+                PTR = 1.0 + G7 * (UM - right.u) / right.a
+                PM = 0.5 * (left.p * PTL ** G3 + right.p * PTR ** G3)
+            else:
+                GEL = np.sqrt((G5 / left.rho) / (G6 * left.p + PPV))
+                GER = np.sqrt((G5 / right.rho) / (G6 * right.p + PPV))
+                PM = (GEL * left.p + GER * right.p - (right.u - left.u)) / (GEL + GER)
+                PM = max(1e-6, PM)
+        return PM
 
     def __get_p_star(self, left_state, right_state):
         """
@@ -123,7 +152,7 @@ class RiemannSolver(object):
         """
 
         return 0.5 * (left_state.u + right_state.u) + 0.5 * (self.__f(p_star, right_state) - self.__f(p_star, left_state))
-    
+
     def get_star_states(self, left_state, right_state):
         """
         :param left_state: thermodynamic conditions to the left of IVP
@@ -136,7 +165,7 @@ class RiemannSolver(object):
 
         # Check for vacuum generation
         if (left_state.a + right_state.a) * 2.0 / (left_state.gamma - 1) <= right_state.a - left_state.u:
-            raise RuntimeError("Vacuum state generated")
+            raise RuntimeError("Vacuum State generated")
 
         p_star = self.__get_p_star(left_state, right_state)
         

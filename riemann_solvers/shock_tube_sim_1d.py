@@ -94,7 +94,7 @@ class ShockTube1D(object):
                 if right_state.p >= p_star:
                     rho_star = rho * (p_star / p) ** (1 / gamma)
                     a_star = np.sqrt(gamma * p_star / rho_star)
-                    wave_right_high = right_state.u + right_state.a
+                    wave_right_high = right_state.u + right_state.sound_speed()
                     wave_right_low = u_star + a_star
                     if wave_right_high < 0.0:
                         p_flux = right_state.p
@@ -106,13 +106,13 @@ class ShockTube1D(object):
                             rho_flux = rho_star
                             u_flux = u_star
                         else:
-                            multiplier = ((2.0 / (gamma + 1)) - (gamma - 1) * right_state.u / (right_state.a * (gamma + 1))) ** (2.0 / (gamma - 1.0))
+                            multiplier = ((2.0 / (gamma + 1)) - (gamma - 1) * right_state.u / (right_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
                             rho_flux = right_state.rho * multiplier
-                            u_flux = (2.0 / (gamma + 1)) * (-right_state.a + (gamma - 1) * right_state.u / 2.0)
+                            u_flux = (2.0 / (gamma + 1)) * (-right_state.sound_speed() + (gamma - 1) * right_state.u / 2.0)
                             p_flux = right_state.p * multiplier ** gamma
                 else:
                     rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
-                    wave_right_shock = right_state.u + right_state.a * ((gamma + 1) * p_star / (2 * gamma * right_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
+                    wave_right_shock = right_state.u + right_state.sound_speed() * ((gamma + 1) * p_star / (2 * gamma * right_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
                     if wave_right_shock < 0.0:
                         p_flux = right_state.p
                         rho_flux = right_state.rho
@@ -129,7 +129,7 @@ class ShockTube1D(object):
                 if left_state.p >= p_star:
                     rho_star = rho * (p_star / p) ** (1 / gamma)
                     a_star = np.sqrt(gamma * p_star / rho_star)
-                    wave_left_high = left_state.u - left_state.a
+                    wave_left_high = left_state.u - left_state.sound_speed()
                     wave_left_low = u_star - a_star
                     if wave_left_high > 0.0:
                         p_flux = left_state.p
@@ -141,13 +141,13 @@ class ShockTube1D(object):
                             u_flux = u_star
                             rho_flux = rho_star
                         else:
-                            multiplier = ((2.0 / (gamma + 1)) + (gamma - 1) * left_state.u / (left_state.a * (gamma + 1))) ** (2.0 / (gamma - 1.0))
+                            multiplier = ((2.0 / (gamma + 1)) + (gamma - 1) * left_state.u / (left_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
                             rho_flux = left_state.rho * multiplier
-                            u_flux = (2.0 / (gamma + 1)) * (left_state.a + (gamma - 1) * left_state.u / 2.0)
+                            u_flux = (2.0 / (gamma + 1)) * (left_state.sound_speed() + (gamma - 1) * left_state.u / 2.0)
                             p_flux = left_state.p * multiplier ** gamma
                 else:
                     rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
-                    wave_left_shock = left_state.u - left_state.a * ((gamma + 1) * p_star / (2 * gamma * left_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
+                    wave_left_shock = left_state.u - left_state.sound_speed() * ((gamma + 1) * p_star / (2 * gamma * left_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
                     if wave_left_shock > 0.0:
                         p_flux = left_state.p
                         u_flux = left_state.u
@@ -170,7 +170,7 @@ class ShockTube1D(object):
         max_wave_speed = 0.0
         for i, dens in enumerate(self.densities):
             state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
-            wave_speed = np.abs(state.u) + state.a
+            wave_speed = np.abs(state.u) + state.sound_speed()
             if (wave_speed > max_wave_speed):
                 max_wave_speed = wave_speed
 

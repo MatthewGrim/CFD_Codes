@@ -41,7 +41,7 @@ class AnalyticShockTube(object):
         if is_left:
             rho = self.left_state.rho
             u = self.left_state.u
-            a = self.left_state.a
+            a = self.left_state.sound_speed()
             p = self.left_state.p
             e = self.left_state.e_int
 
@@ -78,7 +78,7 @@ class AnalyticShockTube(object):
         else:
             rho = self.right_state.rho
             u = self.right_state.u
-            a = self.right_state.a
+            a = self.right_state.sound_speed()
             p = self.right_state.p
 
             # Get star density
@@ -122,7 +122,7 @@ class AnalyticShockTube(object):
         if is_left:
             rho = self.left_state.rho
             u = self.left_state.u
-            a = self.left_state.a
+            a = self.left_state.sound_speed()
             p = self.left_state.p
             gamma = self.left_state.gamma
             S = u - a * ((gamma + 1) * p_star / (2 * gamma * p) + (gamma - 1) / (2 * gamma)) ** 0.5
@@ -146,7 +146,7 @@ class AnalyticShockTube(object):
         else:
             rho = self.right_state.rho
             u = self.right_state.u
-            a = self.right_state.a
+            a = self.right_state.sound_speed()
             p = self.right_state.p
             gamma = self.right_state.gamma
             S = u + a * ((gamma + 1) * p_star / (2 * gamma * p) + (gamma - 1) / (2 * gamma)) ** 0.5

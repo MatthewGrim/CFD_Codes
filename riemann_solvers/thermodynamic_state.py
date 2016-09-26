@@ -21,10 +21,12 @@ class ThermodynamicState(object):
         self.rho = density
         self.u = velocity
 
-        self.a = np.sqrt(gamma * pressure / density)
         self.mom = self.u * self.rho
         self.e_kin = 0.5 * self.rho * self.u * self.u
         self.e_int = pressure / (density * (gamma - 1))
+
+    def sound_speed(self):
+        return np.sqrt(self.gamma * self.p / self.rho)
 
     def update_states(self, density_flux, momentum_flux, e_flux):
         """

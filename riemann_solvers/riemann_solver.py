@@ -43,7 +43,7 @@ class RiemannSolver(object):
         """
         
         if p_star <= outer.p:
-            return 2.0 * outer.a / (self.gamma - 1) * \
+            return 2.0 * outer.sound_speed() / (self.gamma - 1) * \
                    ((p_star / outer.p) ** ((self.gamma - 1) / (2 * self.gamma)) - 1)
         else:
             A = self.__get_A(outer.rho)
@@ -69,7 +69,7 @@ class RiemannSolver(object):
         """
 
         if p_star <= outer.p:
-            return 1.0 / (outer.rho * outer.a) * (p_star / outer.p) ** (-(self.gamma + 1) / (2 * self.gamma))
+            return 1.0 / (outer.rho * outer.sound_speed()) * (p_star / outer.p) ** (-(self.gamma + 1) / (2 * self.gamma))
         else:
             A = self.__get_A(outer.rho)
             B = self.__get_B(outer.p)
@@ -101,7 +101,7 @@ class RiemannSolver(object):
         G5 = 2.0 / (gamma + 1.0)
         G6 = (gamma - 1.0) / (gamma + 1.0)
         G7 = (gamma - 1.0) / 2.0
-        CUP = 0.25 * (left.rho + right.rho) * (left.a + right.a)
+        CUP = 0.25 * (left.rho + right.rho) * (left.sound_speed() + right.sound_speed())
         PPV = 0.5 * (left.p + right.p) + 0.5 * (left.u - right.u) * CUP
         PPV = max(1e-6, PPV)
         PMIN = min(left.p, right.p)
@@ -113,9 +113,10 @@ class RiemannSolver(object):
         else:
             if (PPV < PMIN):
                 PQ = (left.p / right.p) ** G1
-                UM = (PQ * left.u / left.a + right.u / right.a + G4 * (PQ - 1.0)) / (PQ / left.a + 1.0 / right.a)
-                PTL = 1.0 + G7 * (left.u - UM) / left.a
-                PTR = 1.0 + G7 * (UM - right.u) / right.a
+                UM = (PQ * left.u / left.sound_speed() + right.u / right.sound_speed() + G4 * (PQ - 1.0)) \
+                     / (PQ / left.sound_speed() + 1.0 / right.sound_speed())
+                PTL = 1.0 + G7 * (left.u - UM) / left.sound_speed()
+                PTR = 1.0 + G7 * (UM - right.u) / right.sound_speed()
                 PM = 0.5 * (left.p * PTL ** G3 + right.p * PTR ** G3)
             else:
                 GEL = np.sqrt((G5 / left.rho) / (G6 * left.p + PPV))
@@ -164,7 +165,7 @@ class RiemannSolver(object):
         assert isinstance(right_state, ThermodynamicState)
 
         # Check for vacuum generation
-        if (left_state.a + right_state.a) * 2.0 / (left_state.gamma - 1) <= right_state.a - left_state.u:
+        if (left_state.sound_speed() + right_state.sound_speed()) * 2.0 / (left_state.gamma - 1) <= right_state.sound_speed() - left_state.u:
             raise RuntimeError("Vacuum State generated")
 
         p_star = self.__get_p_star(left_state, right_state)

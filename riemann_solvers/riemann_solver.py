@@ -174,6 +174,69 @@ class RiemannSolver(object):
         
         return p_star, u_star
 
+    def sample(self, x_over_t, left_state, right_state, p_star, u_star):
+        """
+        Function used to sample Riemann problem at a specific wave speed, to get the state
+        """
+
+        # Find state along wave line
+        if u_star < x_over_t:
+            # Consider right wave structures
+            rho = right_state.rho
+            p = right_state.p
+            gamma = right_state.gamma
+            if right_state.p >= p_star:
+                rho_star = rho * (p_star / p) ** (1 / gamma)
+                a_star = np.sqrt(gamma * p_star / rho_star)
+                wave_right_high = right_state.u + right_state.sound_speed()
+                wave_right_low = u_star + a_star
+                if wave_right_high < x_over_t:
+                    return right_state.p, right_state.u, right_state.rho
+                else:
+                    if wave_right_low > x_over_t:
+                        return p_star, u_star, rho_star
+                    else:
+                        multiplier = ((2.0 / (gamma + 1)) - (gamma - 1) * (right_state.u - x_over_t) / (right_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
+                        rho = right_state.rho * multiplier
+                        u = (2.0 / (gamma + 1)) * (-right_state.sound_speed() + (gamma - 1) * right_state.u / 2.0 + x_over_t)
+                        p = right_state.p * multiplier ** gamma
+                        return p, u, rho
+            else:
+                rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
+                wave_right_shock = right_state.u + right_state.sound_speed() * ((gamma + 1) * p_star / (2 * gamma * right_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
+                if wave_right_shock < x_over_t:
+                    return right_state.p, right_state.u, right_state.rho
+                else:
+                    return p_star, u_star, rho_star
+        else:
+            # Consider left wave structures
+            rho = left_state.rho
+            p = left_state.p
+            gamma = left_state.gamma
+            if left_state.p >= p_star:
+                rho_star = rho * (p_star / p) ** (1 / gamma)
+                a_star = np.sqrt(gamma * p_star / rho_star)
+                wave_left_high = left_state.u - left_state.sound_speed()
+                wave_left_low = u_star - a_star
+                if wave_left_high > x_over_t:
+                    return left_state.p, left_state.u, left_state.rho
+                else:
+                    if wave_left_low < x_over_t:
+                        return p_star, u_star, rho_star
+                    else:
+                        multiplier = ((2.0 / (gamma + 1)) + (gamma - 1) * (left_state.u - x_over_t) / (left_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
+                        rho = left_state.rho * multiplier
+                        u = (2.0 / (gamma + 1)) * (left_state.sound_speed() + (gamma - 1) * left_state.u / 2.0 + x_over_t)
+                        p = left_state.p * multiplier ** gamma
+                        return p, u, rho
+            else:
+                rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
+                wave_left_shock = left_state.u - left_state.sound_speed() * ((gamma + 1) * p_star / (2 * gamma * left_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
+                if wave_left_shock > x_over_t:
+                    return left_state.p, left_state.u, left_state.rho
+                else:
+                    return p_star, u_star, rho_star
+
 
 def test_iterative_scheme():
     """

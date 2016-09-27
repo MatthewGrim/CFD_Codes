@@ -23,7 +23,7 @@ class ThermodynamicState(object):
 
         self.mom = self.u * self.rho
         self.e_kin = 0.5 * self.rho * self.u * self.u
-        self.e_int = pressure / (density * (gamma - 1))
+        self.e_int = pressure / (self.rho * (gamma - 1))
 
     def sound_speed(self):
         return np.sqrt(self.gamma * self.p / self.rho)
@@ -40,11 +40,11 @@ class ThermodynamicState(object):
         assert(isinstance(momentum_flux, float))
         assert(isinstance(e_flux, float))
 
-        e_tot = self.e_int * self.rho + self.e_kin + e_flux
-
         self.rho += density_flux
-        self.p *= (self.rho / (self.rho - density_flux)) ** self.gamma
-        self.e_int = self.p / (self.rho * (self.gamma - 1))
-        self.e_kin = e_tot - self.e_int * self.rho
+        self.mom += momentum_flux
 
-        self.u = (self.mom + momentum_flux) / self.rho
+        self.u = self.mom / self.rho
+        self.p *= (self.rho / (self.rho - density_flux)) ** self.gamma
+
+        self.e_int = self.p / (self.rho * (self.gamma - 1))
+

@@ -21,8 +21,8 @@ class ShockTube1D(object):
         assert(isinstance(membrane_location, float))
         assert(isinstance(CFL, float))
         assert(isinstance(final_time, float))
-        assert(0.0 < membrane_location and 1.0 > membrane_location)
-        assert(0.0 < CFL and 1.0 > CFL)
+        assert(0.0 < membrane_location < 1.0)
+        assert(0.0 < CFL < 1.0)
 
         self.x = np.linspace(0.005, 0.995, 100)
         self.dx = self.x[0] * 2
@@ -85,81 +85,12 @@ class ShockTube1D(object):
             # Solve Riemann problem for star states
             p_star, u_star = self.solver.get_star_states(left_state, right_state)
 
-            # Find state at boundary
-            if u_star < 0:
-                # Consider right wave structures
-                rho = right_state.rho
-                p = right_state.p
-                gamma = right_state.gamma
-                if right_state.p >= p_star:
-                    rho_star = rho * (p_star / p) ** (1 / gamma)
-                    a_star = np.sqrt(gamma * p_star / rho_star)
-                    wave_right_high = right_state.u + right_state.sound_speed()
-                    wave_right_low = u_star + a_star
-                    if wave_right_high < 0.0:
-                        p_flux = right_state.p
-                        rho_flux = right_state.rho
-                        u_flux = right_state.u
-                    else:
-                        if wave_right_low > 0.0:
-                            p_flux = p_star
-                            rho_flux = rho_star
-                            u_flux = u_star
-                        else:
-                            multiplier = ((2.0 / (gamma + 1)) - (gamma - 1) * right_state.u / (right_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
-                            rho_flux = right_state.rho * multiplier
-                            u_flux = (2.0 / (gamma + 1)) * (-right_state.sound_speed() + (gamma - 1) * right_state.u / 2.0)
-                            p_flux = right_state.p * multiplier ** gamma
-                else:
-                    rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
-                    wave_right_shock = right_state.u + right_state.sound_speed() * ((gamma + 1) * p_star / (2 * gamma * right_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
-                    if wave_right_shock < 0.0:
-                        p_flux = right_state.p
-                        rho_flux = right_state.rho
-                        u_flux = right_state.u
-                    else:
-                        p_flux = p_star
-                        rho_flux = rho_star
-                        u_flux = u_star
-            else:
-                # Consider left wave structures
-                rho = left_state.rho
-                p = left_state.p
-                gamma = left_state.gamma
-                if left_state.p >= p_star:
-                    rho_star = rho * (p_star / p) ** (1 / gamma)
-                    a_star = np.sqrt(gamma * p_star / rho_star)
-                    wave_left_high = left_state.u - left_state.sound_speed()
-                    wave_left_low = u_star - a_star
-                    if wave_left_high > 0.0:
-                        p_flux = left_state.p
-                        u_flux = left_state.u
-                        rho_flux = left_state.rho
-                    else:
-                        if wave_left_low < 0.0:
-                            p_flux = p_star
-                            u_flux = u_star
-                            rho_flux = rho_star
-                        else:
-                            multiplier = ((2.0 / (gamma + 1)) + (gamma - 1) * left_state.u / (left_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
-                            rho_flux = left_state.rho * multiplier
-                            u_flux = (2.0 / (gamma + 1)) * (left_state.sound_speed() + (gamma - 1) * left_state.u / 2.0)
-                            p_flux = left_state.p * multiplier ** gamma
-                else:
-                    rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
-                    wave_left_shock = left_state.u - left_state.sound_speed() * ((gamma + 1) * p_star / (2 * gamma * left_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
-                    if wave_left_shock > 0.0:
-                        p_flux = left_state.p
-                        u_flux = left_state.u
-                        rho_flux = left_state.rho
-                    else:
-                        p_flux = p_star
-                        u_flux = u_star
-                        rho_flux = rho_star
+            # Calculate fluxes using solver sample function
+            p_flux, u_flux, rho_flux = self.solver.sample(0.0, left_state, right_state, p_star, u_star)
 
             # Store fluxes in array
             self.density_fluxes[i] = rho_flux * u_flux
-            self.momentum_fluxes[i] = rho_flux * np.abs(u_flux) * u_flux + p_flux
+            self.momentum_fluxes[i] = rho_flux * u_flux * u_flux + p_flux
             e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
             self.total_energy_fluxes[i] = (p_flux + e_tot) * u_flux
 
@@ -171,10 +102,9 @@ class ShockTube1D(object):
         for i, dens in enumerate(self.densities):
             state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
             wave_speed = np.abs(state.u) + state.sound_speed()
-            if (wave_speed > max_wave_speed):
+            if wave_speed > max_wave_speed:
                 max_wave_speed = wave_speed
 
-        # print max_wave_speed
         return self.CFL * self.dx / max_wave_speed
 
     def _update_states(self, dt):
@@ -229,6 +159,29 @@ class ShockTube1D(object):
             t += dt
             times.append(t)
 
+            title = "Sod Test: {}".format(1)
+            num_plts_x = 2
+            num_plts_y = 2
+            plt.figure(figsize=(20, 10))
+            plt.suptitle(title)
+            plt.subplot(num_plts_x, num_plts_y, 1)
+            plt.title("Density")
+            plt.scatter(self.x, self.densities)
+            plt.xlim([0.0, 1.0])
+            plt.subplot(num_plts_x, num_plts_y, 2)
+            plt.title("Velocity")
+            plt.scatter(self.x, self.velocities)
+            plt.xlim([0.0, 1.0])
+            plt.subplot(num_plts_x, num_plts_y, 3)
+            plt.title("Pressure")
+            plt.scatter(self.x, self.pressures)
+            plt.xlim([0.0, 1.0])
+            plt.subplot(num_plts_x, num_plts_y, 4)
+            plt.title("Internal Energy")
+            plt.xlim([0.0, 1.0])
+            plt.scatter(self.x, self.internal_energies)
+            plt.show()
+
         return times, self.x, self.densities, self.pressures, self.velocities, self.internal_energies
 
 
@@ -255,7 +208,7 @@ def example():
         (times, x, densities, pressures, velocities, internal_energies) = shock_tube_sim.run_sim()
 
         sod_test = AnalyticShockTube(left_state, right_state, membrane_location[i], 1000)
-        x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(times[-1])
+        x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(times[-1], membrane_location[i])
 
         title = "Sod Test: {}".format(1)
         num_plts_x = 2

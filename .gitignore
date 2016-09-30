@@ -1,3 +1,6 @@
+// Ignore pycharm .idea
+.idea
+
 // Ignore generated images
 *.png
 

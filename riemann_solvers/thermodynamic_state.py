@@ -28,7 +28,7 @@ class ThermodynamicState(object):
     def sound_speed(self):
         return np.sqrt(self.gamma * self.p / self.rho)
 
-    def update_states(self, density_flux, momentum_flux, e_flux):
+    def update_states(self, density_flux, momentum_flux, e_flux, i):
         """
         Updates the thermodynamic state of the cell based on conservative fluxes into volume
 
@@ -40,11 +40,15 @@ class ThermodynamicState(object):
         assert(isinstance(momentum_flux, float))
         assert(isinstance(e_flux, float))
 
+        e_tot_initial = self.rho * self.e_int + self.e_kin + e_flux
+
         self.rho += density_flux
         self.mom += momentum_flux
 
         self.u = self.mom / self.rho
-        self.p *= (self.rho / (self.rho - density_flux)) ** self.gamma
 
-        self.e_int = self.p / (self.rho * (self.gamma - 1))
+        self.e_kin = 0.5 * self.rho * self.u ** 2
+        self.e_int = (e_tot_initial - self.e_kin) / self.rho
+
+        self.p = self.rho * self.e_int * (self.gamma - 1)
 

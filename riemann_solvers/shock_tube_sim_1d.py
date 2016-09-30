@@ -60,6 +60,7 @@ class ShockTube1D(object):
         # Initialise flux arrays
         self.density_fluxes = np.zeros(len(self.densities) + 1)
         self.momentum_fluxes = np.zeros(len(self.densities) + 1)
+        self.pressure_forces = np.zeros(len(self.densities) + 1)
         self.total_energy_fluxes = np.zeros(len(self.densities) + 1)
 
     def _calculate_fluxes(self):
@@ -101,7 +102,7 @@ class ShockTube1D(object):
         max_wave_speed = 0.0
         for i, dens in enumerate(self.densities):
             state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
-            wave_speed = np.abs(state.u) + state.sound_speed()
+            wave_speed = np.fabs(state.u) + state.sound_speed()
             if wave_speed > max_wave_speed:
                 max_wave_speed = wave_speed
 
@@ -122,8 +123,7 @@ class ShockTube1D(object):
             total_energy_flux = (self.total_energy_fluxes[i] - self.total_energy_fluxes[i + 1]) * dt / self.dx
 
             state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
-
-            state.update_states(total_density_flux, total_momentum_flux, total_energy_flux)
+            state.update_states(total_density_flux, total_momentum_flux, total_energy_flux, i)
 
             self.densities[i] = state.rho
             self.pressures[i] = state.p
@@ -159,29 +159,6 @@ class ShockTube1D(object):
             t += dt
             times.append(t)
 
-            title = "Sod Test: {}".format(1)
-            num_plts_x = 2
-            num_plts_y = 2
-            plt.figure(figsize=(20, 10))
-            plt.suptitle(title)
-            plt.subplot(num_plts_x, num_plts_y, 1)
-            plt.title("Density")
-            plt.scatter(self.x, self.densities)
-            plt.xlim([0.0, 1.0])
-            plt.subplot(num_plts_x, num_plts_y, 2)
-            plt.title("Velocity")
-            plt.scatter(self.x, self.velocities)
-            plt.xlim([0.0, 1.0])
-            plt.subplot(num_plts_x, num_plts_y, 3)
-            plt.title("Pressure")
-            plt.scatter(self.x, self.pressures)
-            plt.xlim([0.0, 1.0])
-            plt.subplot(num_plts_x, num_plts_y, 4)
-            plt.title("Internal Energy")
-            plt.xlim([0.0, 1.0])
-            plt.scatter(self.x, self.internal_energies)
-            plt.show()
-
         return times, self.x, self.densities, self.pressures, self.velocities, self.internal_energies
 
 
@@ -199,7 +176,7 @@ def example():
     membrane_location = [0.3, 0.5, 0.5, 0.4, 0.8]
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
-    for i in range(0, 1):
+    for i in range(0, 5):
         left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
 
@@ -208,9 +185,10 @@ def example():
         (times, x, densities, pressures, velocities, internal_energies) = shock_tube_sim.run_sim()
 
         sod_test = AnalyticShockTube(left_state, right_state, membrane_location[i], 1000)
+
         x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(times[-1], membrane_location[i])
 
-        title = "Sod Test: {}".format(1)
+        title = "Sod Test: {}".format(i)
         num_plts_x = 2
         num_plts_y = 2
         plt.figure(figsize=(20, 10))
@@ -237,17 +215,6 @@ def example():
         plt.scatter(x, internal_energies)
         plt.show()
 
-        plt.figure(figsize=(20, 10))
-        plt.subplot(1, 3, 1)
-        plt.title("Mass Conservation")
-        plt.plot(times[1:], shock_tube_sim.mass_conservation)
-        plt.subplot(1, 3, 2)
-        plt.title("Momentum Conservation")
-        plt.plot(times[1:], shock_tube_sim.momentum_conservation)
-        plt.subplot(1, 3, 3)
-        plt.title("Energy Conservation")
-        plt.plot(times[1:], shock_tube_sim.energy_conservation)
-        plt.show()
 
 if __name__ == '__main__':
     example()

@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 from CFD_Projects.riemann_solvers.thermodynamic_state import ThermodynamicState
 from CFD_Projects.riemann_solvers.riemann_solver import RiemannSolver
 from CFD_Projects.riemann_solvers.analytic_shock_tube import AnalyticShockTube
+from CFD_Projects.riemann_solvers.flux_calculator import FluxCalculator
 
 
 class ShockTube1D(object):
@@ -67,33 +68,13 @@ class ShockTube1D(object):
         """
         Function used to calculate the fluxes between cells using a flux based method
         """
-        self.density_fluxes = np.zeros(len(self.densities) + 1)
-        self.momentum_fluxes = np.zeros(len(self.densities) + 1)
-        self.total_energy_fluxes = np.zeros(len(self.densities) + 1)
+        self.density_fluxes, \
+        self.momentum_fluxes, \
+        self.total_energy_fluxes = FluxCalculator.calculate_godunov_fluxes(self.densities,
+                                                                           self.pressures,
+                                                                           self.velocities,
+                                                                           self.gamma)
 
-        for i, dens_flux in enumerate(self.density_fluxes):
-            # Generate left and right states from cell averaged values
-            if i == 0:
-                left_state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
-                right_state = left_state
-            elif i == len(self.density_fluxes) - 1:
-                left_state = ThermodynamicState(self.pressures[i - 1], self.densities[i - 1], self.velocities[i - 1], self.gamma)
-                right_state = left_state
-            else:
-                left_state = ThermodynamicState(self.pressures[i - 1], self.densities[i - 1], self.velocities[i - 1], self.gamma)
-                right_state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
-
-            # Solve Riemann problem for star states
-            p_star, u_star = self.solver.get_star_states(left_state, right_state)
-
-            # Calculate fluxes using solver sample function
-            p_flux, u_flux, rho_flux = self.solver.sample(0.0, left_state, right_state, p_star, u_star)
-
-            # Store fluxes in array
-            self.density_fluxes[i] = rho_flux * u_flux
-            self.momentum_fluxes[i] = rho_flux * u_flux * u_flux + p_flux
-            e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
-            self.total_energy_fluxes[i] = (p_flux + e_tot) * u_flux
 
     def _calculate_time_step(self):
         """

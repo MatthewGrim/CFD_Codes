@@ -16,7 +16,7 @@ from CFD_Projects.riemann_solvers.flux_calculator import FluxCalculator
 
 
 class ShockTube1D(object):
-    def __init__(self, left_state, right_state, membrane_location, final_time, CFL):
+    def __init__(self, left_state, right_state, membrane_location, final_time, CFL, flux_calculator):
         assert(isinstance(left_state, ThermodynamicState))
         assert(isinstance(right_state, ThermodynamicState))
         assert(isinstance(membrane_location, float))
@@ -30,6 +30,7 @@ class ShockTube1D(object):
         self.final_time = final_time
         self.CFL = CFL
         self.solver = RiemannSolver(left_state.gamma)
+        self.flux_calculator = flux_calculator
 
         # Initialise physical states
         self.densities = list()
@@ -53,28 +54,34 @@ class ShockTube1D(object):
         self.velocities = np.asarray(self.velocities)
         self.internal_energies = np.asarray(self.internal_energies)
 
-        # Initialise conservation checks
-        self.mass_conservation = list()
-        self.momentum_conservation = list()
-        self.energy_conservation = list()
-
         # Initialise flux arrays
         self.density_fluxes = np.zeros(len(self.densities) + 1)
         self.momentum_fluxes = np.zeros(len(self.densities) + 1)
         self.pressure_forces = np.zeros(len(self.densities) + 1)
         self.total_energy_fluxes = np.zeros(len(self.densities) + 1)
 
-    def _calculate_fluxes(self):
+    def _calculate_fluxes(self, dt):
         """
         Function used to calculate the fluxes between cells using a flux based method
         """
-        self.density_fluxes, \
-        self.momentum_fluxes, \
-        self.total_energy_fluxes = FluxCalculator.calculate_godunov_fluxes(self.densities,
-                                                                           self.pressures,
-                                                                           self.velocities,
-                                                                           self.gamma)
-
+        if self.flux_calculator == FluxCalculator.GODUNOV:
+            self.density_fluxes, \
+            self.momentum_fluxes, \
+            self.total_energy_fluxes = FluxCalculator.calculate_godunov_fluxes(self.densities,
+                                                                               self.pressures,
+                                                                               self.velocities,
+                                                                               self.gamma)
+        elif self.flux_calculator == FluxCalculator.RANDOM_CHOICE:
+            dx_over_dt = self.dx / dt
+            self.density_fluxes, \
+            self.momentum_fluxes, \
+            self.total_energy_fluxes = FluxCalculator.calculate_random_choice_fluxes(self.densities,
+                                                                                     self.pressures,
+                                                                                     self.velocities,
+                                                                                     self.gamma,
+                                                                                     dx_over_dt)
+        else:
+            raise RuntimeError("Flux calculator does not exist")
 
     def _calculate_time_step(self):
         """
@@ -86,8 +93,10 @@ class ShockTube1D(object):
             wave_speed = np.fabs(state.u) + state.sound_speed()
             if wave_speed > max_wave_speed:
                 max_wave_speed = wave_speed
-
-        return self.CFL * self.dx / max_wave_speed
+        if self.flux_calculator == FluxCalculator.RANDOM_CHOICE:
+            return 0.5 * self.CFL * self.dx / max_wave_speed
+        else:
+            return self.CFL * self.dx / max_wave_speed
 
     def _update_states(self, dt):
         """
@@ -95,36 +104,37 @@ class ShockTube1D(object):
         """
         assert(isinstance(dt, float))
 
-        total_mass = 0.0
-        total_momentum = 0.0
-        total_energy = 0.0
         for i, state in enumerate(self.densities):
-            total_density_flux = (self.density_fluxes[i] - self.density_fluxes[i + 1]) * dt / self.dx
-            total_momentum_flux = (self.momentum_fluxes[i] - self.momentum_fluxes[i + 1]) * dt / self.dx
-            total_energy_flux = (self.total_energy_fluxes[i] - self.total_energy_fluxes[i + 1]) * dt / self.dx
+            if self.flux_calculator == FluxCalculator.RANDOM_CHOICE:
+                rho = self.density_fluxes[i]
+                momentum = self.momentum_fluxes[i]
+                total_energy = self.total_energy_fluxes[i]
 
-            state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
-            state.update_states(total_density_flux, total_momentum_flux, total_energy_flux, i)
+                velocity = momentum / rho
+                kinetic_energy = 0.5 * rho * velocity ** 2
+                internal_energy = total_energy - kinetic_energy
+                pressure = internal_energy * (self.gamma - 1)
+
+                state = ThermodynamicState(pressure, rho, velocity, self.gamma)
+            else:
+                total_density_flux = (self.density_fluxes[i] - self.density_fluxes[i + 1]) * dt / self.dx
+                total_momentum_flux = (self.momentum_fluxes[i] - self.momentum_fluxes[i + 1]) * dt / self.dx
+                total_energy_flux = (self.total_energy_fluxes[i] - self.total_energy_fluxes[i + 1]) * dt / self.dx
+
+                state = ThermodynamicState(self.pressures[i], self.densities[i], self.velocities[i], self.gamma)
+                state.update_states(total_density_flux, total_momentum_flux, total_energy_flux, i)
 
             self.densities[i] = state.rho
             self.pressures[i] = state.p
             self.velocities[i] = state.u
             self.internal_energies[i] = state.e_int
 
-            total_mass += state.rho * self.dx
-            total_momentum += state.mom * self.dx
-            total_energy += state.e_int
-
-        self.mass_conservation.append(total_mass)
-        self.momentum_conservation.append(total_momentum)
-        self.energy_conservation.append(total_energy)
-
     def _evolve_time_step(self):
         """
         Function carrying out a single timestep
         """
-        self._calculate_fluxes()
         dt = self._calculate_time_step()
+        self._calculate_fluxes(dt)
         self._update_states(dt)
 
         return dt
@@ -161,7 +171,9 @@ def example():
         left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
 
-        shock_tube_sim = ShockTube1D(left_state, right_state, membrane_location[i], final_time=end_times[i], CFL=0.9)
+        shock_tube_sim = ShockTube1D(left_state, right_state, membrane_location[i],
+                                     final_time=end_times[i], CFL=0.9,
+                                     flux_calculator=FluxCalculator.GODUNOV)
 
         (times, x, densities, pressures, velocities, internal_energies) = shock_tube_sim.run_sim()
 
@@ -169,7 +181,7 @@ def example():
 
         x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(times[-1], membrane_location[i])
 
-        title = "Sod Test: {}".format(i)
+        title = "Sod Test: {}".format(i + 1)
         num_plts_x = 2
         num_plts_y = 2
         plt.figure(figsize=(20, 10))

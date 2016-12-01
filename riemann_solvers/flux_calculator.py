@@ -7,6 +7,7 @@ This file contains a a class providing methods to calculate the fluxes using Rie
 
 from CFD_Projects.riemann_solvers.thermodynamic_state import ThermodynamicState
 from CFD_Projects.riemann_solvers.riemann_solver import RiemannSolver
+from CFD_Projects.riemann_solvers.van_der_corput import VanDerCorput
 
 import numpy as np
 
@@ -56,7 +57,7 @@ class FluxCalculator(object):
         return density_fluxes, momentum_fluxes, total_energy_fluxes
 
     @staticmethod
-    def calculate_random_choice_fluxes(densities, pressures, velocities, gamma, dx_over_dt):
+    def calculate_random_choice_fluxes(densities, pressures, velocities, gamma, ts, dx_over_dt):
         """
         Function used to calculate states for a 1D simulation using Glimm's random choice scheme as in Toro Chapter 7
         """
@@ -65,7 +66,7 @@ class FluxCalculator(object):
         total_energy_fluxes = np.zeros(len(densities) + 1)
 
         solver = RiemannSolver(gamma)
-
+        theta = VanDerCorput.calculate_theta(ts, 2, 1)
         for i, dens in enumerate(densities):
             # Generate left and right states from cell averaged values
             if i == 0:
@@ -86,7 +87,6 @@ class FluxCalculator(object):
             p_star_right, u_star_right = solver.get_star_states(mid_state, right_state)
 
             # Calculate fluxes using solver sample function
-            theta = np.random.rand()
             if theta <= 0.5:
                 p_flux, u_flux, rho_flux = solver.sample(theta * dx_over_dt, left_state, mid_state,
                                                          p_star_left, u_star_left)

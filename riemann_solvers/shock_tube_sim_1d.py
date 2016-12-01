@@ -60,10 +60,12 @@ class ShockTube1D(object):
         self.pressure_forces = np.zeros(len(self.densities) + 1)
         self.total_energy_fluxes = np.zeros(len(self.densities) + 1)
 
-    def _calculate_fluxes(self, dt):
+    def _calculate_fluxes(self, dt, ts):
         """
         Function used to calculate the fluxes between cells using a flux based method
         """
+        assert isinstance(ts, int)
+
         if self.flux_calculator == FluxCalculator.GODUNOV:
             self.density_fluxes, \
             self.momentum_fluxes, \
@@ -79,6 +81,7 @@ class ShockTube1D(object):
                                                                                      self.pressures,
                                                                                      self.velocities,
                                                                                      self.gamma,
+                                                                                     ts,
                                                                                      dx_over_dt)
         else:
             raise RuntimeError("Flux calculator does not exist")
@@ -129,12 +132,14 @@ class ShockTube1D(object):
             self.velocities[i] = state.u
             self.internal_energies[i] = state.e_int
 
-    def _evolve_time_step(self):
+    def _evolve_time_step(self, ts):
         """
         Function carrying out a single timestep
         """
+        assert isinstance(ts, int)
+
         dt = self._calculate_time_step()
-        self._calculate_fluxes(dt)
+        self._calculate_fluxes(dt, ts)
         self._update_states(dt)
 
         return dt
@@ -144,10 +149,12 @@ class ShockTube1D(object):
         High level simulation function that runs the simulation - effectively the controller
         """
         t = 0
+        ts = 1
         times = [ t ]
         while t < self.final_time:
-            dt = self._evolve_time_step()
+            dt = self._evolve_time_step(ts)
             t += dt
+            ts += 1
             times.append(t)
 
         return times, self.x, self.densities, self.pressures, self.velocities, self.internal_energies
@@ -171,15 +178,19 @@ def example():
         left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
 
-        shock_tube_sim = ShockTube1D(left_state, right_state, membrane_location[i],
+        shock_tube_sim_god = ShockTube1D(left_state, right_state, membrane_location[i],
                                      final_time=end_times[i], CFL=0.9,
                                      flux_calculator=FluxCalculator.GODUNOV)
+        shock_tube_sim_rc = ShockTube1D(left_state, right_state, membrane_location[i],
+                                     final_time=end_times[i], CFL=0.9,
+                                     flux_calculator=FluxCalculator.RANDOM_CHOICE)
 
-        (times, x, densities, pressures, velocities, internal_energies) = shock_tube_sim.run_sim()
+        (times_god, x_god, densities_god, pressures_god, velocities_god, internal_energies_god) = shock_tube_sim_god.run_sim()
+        (times_rc, x_rc, densities_rc, pressures_rc, velocities_rc, internal_energies_rc) = shock_tube_sim_rc.run_sim()
 
         sod_test = AnalyticShockTube(left_state, right_state, membrane_location[i], 1000)
 
-        x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(times[-1], membrane_location[i])
+        x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(times_god[-1], membrane_location[i])
 
         title = "Sod Test: {}".format(i + 1)
         num_plts_x = 2
@@ -189,23 +200,27 @@ def example():
         plt.subplot(num_plts_x, num_plts_y, 1)
         plt.title("Density")
         plt.plot(x_sol, rho_sol)
-        plt.scatter(x, densities)
+        plt.scatter(x_god, densities_god, c='g')
+        plt.scatter(x_rc, densities_rc, c='r')
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 2)
         plt.title("Velocity")
         plt.plot(x_sol, u_sol)
-        plt.scatter(x, velocities)
+        plt.scatter(x_god, velocities_god, c='g')
+        plt.scatter(x_rc, velocities_rc, c='r')
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 3)
         plt.title("Pressure")
         plt.plot(x_sol, p_sol)
-        plt.scatter(x, pressures)
+        plt.scatter(x_god, pressures_god, c='g')
+        plt.scatter(x_rc, pressures_rc, c='r')
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 4)
         plt.title("Internal Energy")
         plt.plot(x_sol, e_sol)
+        plt.scatter(x_god, internal_energies_god, c='g')
+        plt.scatter(x_rc, internal_energies_rc, c='r')
         plt.xlim([0.0, 1.0])
-        plt.scatter(x, internal_energies)
         plt.show()
 
 

@@ -2,14 +2,15 @@
 Author: Rohan
 Date: 29/06/16
 
-This file contains a class used to generate the 1D analytic solution to the shock tube problems using a Riemann solution.
+This file contains a class used to generate the 1D analytic solution to the shock tube problems using a Riemann
+solution. This problem type is not part of the simulation hierarchy because it is analytic.
 """
 
 import numpy as np
 from matplotlib import pyplot as plt
 
-from CFD_Projects.riemann_solvers.thermodynamic_state import ThermodynamicState
-from CFD_Projects.riemann_solvers.riemann_solver import RiemannSolver
+from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
+from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import RiemannSolver
 
 
 class AnalyticShockTube(object):

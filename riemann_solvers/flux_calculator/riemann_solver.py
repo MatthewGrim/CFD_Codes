@@ -8,7 +8,7 @@ follows that in Toro - Chapter 4.
 
 import numpy as np
 
-from thermodynamic_state import ThermodynamicState
+from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
 
 
 class RiemannSolver(object):

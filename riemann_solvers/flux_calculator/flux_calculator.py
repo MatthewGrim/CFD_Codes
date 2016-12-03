@@ -5,9 +5,9 @@ Date: 04/10/16
 This file contains a a class providing methods to calculate the fluxes using Riemann solver based methods 
 """
 
-from CFD_Projects.riemann_solvers.thermodynamic_state import ThermodynamicState
-from CFD_Projects.riemann_solvers.riemann_solver import RiemannSolver
-from CFD_Projects.riemann_solvers.van_der_corput import VanDerCorput
+from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
+from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import RiemannSolver
+from CFD_Projects.riemann_solvers.flux_calculator.van_der_corput import VanDerCorput
 
 import numpy as np
 

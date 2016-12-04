@@ -85,10 +85,10 @@ def example():
         right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
 
         shock_tube_god = ShockTube1D(left_state, right_state, membrane_location[i],
-                                     final_time=end_times[i], CFL=0.9,
+                                     final_time=end_times[i], CFL=0.45,
                                      flux_calculator=FluxCalculator.GODUNOV)
         shock_tube_rc = ShockTube1D(left_state, right_state, membrane_location[i],
-                                    final_time=end_times[i], CFL=0.9,
+                                    final_time=end_times[i], CFL=0.45,
                                     flux_calculator=FluxCalculator.RANDOM_CHOICE)
 
         # Get Godunov and Random Choice solutions

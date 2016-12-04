@@ -87,13 +87,6 @@ class RiemannSolver(object):
         """
         :return: an estimate for p_star used in the iterative scheme
         """
-        #
-        # numerator = left.a + right.a - 0.5 * (self.gamma - 1) * (right.u - left.u)
-        # denominator = left.a / (left.p ** ((self.gamma - 1) / (2 * self.gamma))) + \
-        #               right.a / (right.p ** ((self.gamma - 1) / (2 * self.gamma)))
-        #
-        # return (numerator / denominator) ** ((2 * self.gamma) / (self.gamma - 1))
-
         gamma = self.gamma
         G1 = (gamma - 1.0) / (2.0 * gamma)
         G3 = (2.0 * gamma) / (gamma - 1.0)
@@ -127,7 +120,6 @@ class RiemannSolver(object):
 
     def __get_p_star(self, left_state, right_state):
         """
-
         :return: the pressure in the star region.
         """
         TOL = 1e-6
@@ -166,8 +158,7 @@ class RiemannSolver(object):
 
         # Check for vacuum generation
         if RiemannSolver.is_vacuum_generated(left_state, right_state):
-            raise RuntimeError("States will generate a vacuum!")
-            # self.sample_vacuum(0.0, left_state, right_state)
+            self.sample_vacuum(0.0, left_state, right_state)
 
         p_star = self.__get_p_star(left_state, right_state)
         u_star = self.__get_u_star(p_star, left_state, right_state)
@@ -182,6 +173,7 @@ class RiemannSolver(object):
         vacuum_condition = (left_state.sound_speed() + right_state.sound_speed()) * 2.0 / (left_state.gamma - 1)
         velocity_difference = right_state.u - left_state.u
 
+        # zero_energy_state = left_state.sound_speed() == 0.0 or right_state.sound_speed() == 0.0
         if vacuum_condition <= velocity_difference:
             return True
         else:
@@ -222,8 +214,7 @@ class RiemannSolver(object):
         """
         # Check if state is a vacuum
         if RiemannSolver.is_vacuum_generated(left_state, right_state):
-            raise RuntimeError("States will generate a vacuum!")
-            # return self.sample_vacuum(x_over_t, left_state, right_state)
+            return self.sample_vacuum(x_over_t, left_state, right_state)
         else:
             # Find state along wave line
             if u_star < x_over_t:

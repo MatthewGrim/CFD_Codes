@@ -20,6 +20,7 @@ class BaseSimulationND(object):
         self.CFL = 0
 
         self.flux_calculator = 0
+        self.boundary_functions = 0
 
         self.is_initialised = False
 

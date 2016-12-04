@@ -24,23 +24,16 @@ class FluxCalculator(object):
         """
         Function used to calculate fluxes for a 1D simulation using Godunov's scheme as in Toro Chapter 6
         """
-        density_fluxes = np.zeros(len(densities) + 1)
-        momentum_fluxes = np.zeros(len(densities) + 1)
-        total_energy_fluxes = np.zeros(len(densities) + 1)
+        density_fluxes = np.zeros(len(densities) - 1)
+        momentum_fluxes = np.zeros(len(densities) - 1)
+        total_energy_fluxes = np.zeros(len(densities) - 1)
 
         solver = RiemannSolver(gamma)
 
         for i, dens_flux in enumerate(density_fluxes):
             # Generate left and right states from cell averaged values
-            if i == 0:
-                left_state = ThermodynamicState(pressures[i], densities[i], velocities[i], gamma)
-                right_state = left_state
-            elif i == len(density_fluxes) - 1:
-                left_state = ThermodynamicState(pressures[i - 1], densities[i - 1], velocities[i - 1], gamma)
-                right_state = left_state
-            else:
-                left_state = ThermodynamicState(pressures[i - 1], densities[i - 1], velocities[i - 1], gamma)
-                right_state = ThermodynamicState(pressures[i], densities[i], velocities[i], gamma)
+            left_state = ThermodynamicState(pressures[i], densities[i], velocities[i], gamma)
+            right_state = ThermodynamicState(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma)
 
             # Solve Riemann problem for star states
             p_star, u_star = solver.get_star_states(left_state, right_state)
@@ -61,26 +54,17 @@ class FluxCalculator(object):
         """
         Function used to calculate states for a 1D simulation using Glimm's random choice scheme as in Toro Chapter 7
         """
-        density_fluxes = np.zeros(len(densities) + 1)
-        momentum_fluxes = np.zeros(len(densities) + 1)
-        total_energy_fluxes = np.zeros(len(densities) + 1)
+        density_fluxes = np.zeros(len(densities) - 1)
+        momentum_fluxes = np.zeros(len(densities) - 1)
+        total_energy_fluxes = np.zeros(len(densities) - 1)
 
         solver = RiemannSolver(gamma)
         theta = VanDerCorput.calculate_theta(ts, 2, 1)
-        for i, dens in enumerate(densities):
+        for i in range(len(densities) - 2):
             # Generate left and right states from cell averaged values
-            if i == 0:
-                left_state = ThermodynamicState(pressures[i], densities[i], velocities[i], gamma)
-                mid_state = left_state
-                right_state = ThermodynamicState(pressures[i], densities[i], velocities[i], gamma)
-            elif i == len(densities) - 1:
-                left_state = ThermodynamicState(pressures[i - 2], densities[i - 2], velocities[i - 2], gamma)
-                mid_state = ThermodynamicState(pressures[i - 1], densities[i - 1], velocities[i - 1], gamma)
-                right_state = mid_state
-            else:
-                left_state = ThermodynamicState(pressures[i - 1], densities[i - 1], velocities[i - 1], gamma)
-                mid_state = ThermodynamicState(pressures[i], densities[i], velocities[i], gamma)
-                right_state = ThermodynamicState(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma)
+            left_state = ThermodynamicState(pressures[i], densities[i], velocities[i], gamma)
+            mid_state = ThermodynamicState(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma)
+            right_state = ThermodynamicState(pressures[i + 2], densities[i + 2], velocities[i + 2], gamma)
 
             # Solve Riemann problem for star states on either side of the cell
             p_star_left, u_star_left = solver.get_star_states(left_state, mid_state)

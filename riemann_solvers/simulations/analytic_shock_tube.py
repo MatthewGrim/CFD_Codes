@@ -78,7 +78,7 @@ def test_sod_problems():
         title = "Sod Test: {}".format(i + 1)
         num_plts_x = 2
         num_plts_y = 2
-        plt.figure(figsize=(10, 10))
+        plt.figure(figsize=(20, 10))
         plt.suptitle(title)
         plt.subplot(num_plts_x, num_plts_y, 1)
         plt.title("Density")

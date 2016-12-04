@@ -13,6 +13,8 @@ from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicSt
 from CFD_Projects.riemann_solvers.simulations.analytic_shock_tube import AnalyticShockTube
 from CFD_Projects.riemann_solvers.simulations.base_simulation import BaseSimulation1D
 from CFD_Projects.riemann_solvers.flux_calculator.flux_calculator import FluxCalculator
+from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryConditionND
+from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryCondition1D
 from CFD_Projects.riemann_solvers.controller import Controller1D
 
 
@@ -55,6 +57,11 @@ class ShockTube1D(BaseSimulation1D):
         self.pressures = np.asarray(self.pressures)
         self.velocities = np.asarray(self.velocities)
         self.internal_energies = np.asarray(self.internal_energies)
+
+        self.boundary_functions = {
+            BoundaryConditionND.X_LOW: lambda state : BoundaryCondition1D.transmissive_boundary_condition(state),
+            BoundaryConditionND.X_HIGH: lambda state : BoundaryCondition1D.transmissive_boundary_condition(state)
+        }
 
         self.is_initialised = True
 

@@ -7,8 +7,8 @@ This file contains tests for an exact riemann solver
 
 import unittest
 
-from CFD_Projects.riemann_solvers.riemann_solver import RiemannSolver
-from CFD_Projects.riemann_solvers.thermodynamic_state import ThermodynamicState
+from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import RiemannSolver
+from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
 
 
 class RiemannSolverTest(unittest.TestCase):

@@ -9,11 +9,15 @@ import numpy as np
 
 from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
 from CFD_Projects.riemann_solvers.flux_calculator.flux_calculator import FluxCalculator
+from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryConditionND
 
 from CFD_Projects.riemann_solvers.simulations.base_simulation import BaseSimulation1D
 
 
 class ControllerND(object):
+    def _set_boundary_conditions(self):
+        raise NotImplementedError("Calling from base class!")
+
     def _calculate_fluxes(self, dt, ts):
         raise NotImplementedError("Calling from base class!")
 
@@ -30,6 +34,7 @@ class ControllerND(object):
         assert isinstance(ts, int)
 
         dt = self._calculate_time_step()
+        self._set_boundary_conditions()
         self._calculate_fluxes(dt, ts)
         self._update_states(dt)
 
@@ -61,6 +66,29 @@ class Controller1D(ControllerND):
         self.total_energy_fluxes = np.zeros(len(self.densities) + 1)
 
         self.flux_calculator = simulation.flux_calculator
+        self.boundary_functions = simulation.boundary_functions
+
+    def _set_boundary_conditions(self):
+        """
+        Function used to extend the grid at the boundary conditions
+        """
+        i_length = len(self.densities) - 1
+        start_state = ThermodynamicState(self.pressures[0], self.densities[0], self.velocities[0], self.gamma)
+        end_state = ThermodynamicState(self.pressures[i_length], self.densities[i_length], self.velocities[i_length], self.gamma)
+
+        # Low end
+        start_state = self.boundary_functions[BoundaryConditionND.X_LOW](start_state)
+        self.densities = np.append([start_state.rho], self.densities, 0)
+        self.pressures = np.append([start_state.p], self.pressures, 0)
+        self.velocities = np.append([start_state.u], self.velocities, 0)
+        self.internal_energies = np.append([start_state.e_int], self.internal_energies, 0)
+
+        # High end
+        end_state = self.boundary_functions[BoundaryConditionND.X_HIGH](end_state)
+        self.densities = np.append(self.densities, [end_state.rho], 0)
+        self.pressures = np.append(self.pressures, [end_state.p], 0)
+        self.velocities = np.append(self.velocities, [end_state.u], 0)
+        self.internal_energies = np.append(self.internal_energies, [end_state.e_int], 0)
 
     def _calculate_fluxes(self, dt, ts):
         """
@@ -87,6 +115,12 @@ class Controller1D(ControllerND):
                                                                                      dx_over_dt)
         else:
             raise RuntimeError("Flux calculator does not exist")
+
+        grid_length = len(self.densities)
+        self.densities = self.densities[1 : grid_length - 1]
+        self.pressures = self.pressures[1 : grid_length - 1]
+        self.velocities = self.velocities[1 : grid_length - 1]
+        self.internal_energies = self.internal_energies[1 : grid_length - 1]
 
     def _calculate_time_step(self):
         """

@@ -9,7 +9,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
-from CFD_Projects.riemann_solvers.simulations.analytic_shock_tube import AnalyticShockTube
 from CFD_Projects.riemann_solvers.simulations.base_simulation import BaseSimulation1D
 from CFD_Projects.riemann_solvers.flux_calculator.flux_calculator import FluxCalculator
 from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryConditionND
@@ -65,7 +64,7 @@ class Noh1D(BaseSimulation1D):
 
         super(Noh1D, self).__init__()
 
-        self.mesh = np.linspace(0.005, 0.4, 800)
+        self.mesh = np.linspace(0.002, 0.4, 100)
         self.dx = self.mesh[0] * 2
         self.final_time = final_time
         self.CFL = CFL
@@ -99,12 +98,17 @@ def test_noh():
     """
     This function runs through the tri lab version of the Noh problem. See the Tri Lab verification test suite.
     """
-    initial_state = ThermodynamicState(0.0, 1.0, -1.0, 5.0 / 3.0)
+    # Use small pressure value for numerical stability (and to be physically meaningful)
+    initial_state = ThermodynamicState(1e-4, 1.0, -1.0, 5.0 / 3.0)
 
-    # Run Noh sim
+    # Run Noh sim with Godunov and Random Choice
     noh_god = Noh1D(initial_state, final_time=0.3, CFL=0.45, flux_calculator=FluxCalculator.GODUNOV)
     godunov_sim = Controller1D(noh_god)
     (times_god, x_god, densities_god, pressures_god, velocities_god, internal_energies_god) = godunov_sim.run_sim()
+
+    noh_rc = Noh1D(initial_state, final_time=0.3, CFL=0.45, flux_calculator=FluxCalculator.RANDOM_CHOICE)
+    rc_sim = Controller1D(noh_rc)
+    (times_rc, x_rc, densities_rc, pressures_rc, velocities_rc, internal_energies_rc) = rc_sim.run_sim()
 
     # Get analytic solution
     noh_test = AnalyticNoh(initial_state, 0.4, 100)
@@ -118,19 +122,23 @@ def test_noh():
     plt.subplot(num_plts_x, num_plts_y, 1)
     plt.title("Density")
     plt.plot(x_sol, rho_sol)
-    plt.scatter(x_god, densities_god)
+    plt.scatter(x_god, densities_god, c='g')
+    plt.scatter(x_rc, densities_rc, c='r')
     plt.subplot(num_plts_x, num_plts_y, 2)
     plt.title("Velocity")
     plt.plot(x_sol, u_sol)
-    plt.scatter(x_god, velocities_god)
+    plt.scatter(x_god, velocities_god, c='g')
+    plt.scatter(x_rc, velocities_rc, c='r')
     plt.subplot(num_plts_x, num_plts_y, 3)
     plt.title("Pressure")
     plt.plot(x_sol, p_sol)
-    plt.scatter(x_god, pressures_god)
+    plt.scatter(x_god, pressures_god, c='g')
+    plt.scatter(x_rc, pressures_rc, c='r')
     plt.subplot(num_plts_x, num_plts_y, 4)
     plt.title("Energy")
     plt.plot(x_sol, e_sol)
-    plt.scatter(x_god, internal_energies_god)
+    plt.scatter(x_god, internal_energies_god, c='g')
+    plt.scatter(x_rc, internal_energies_rc, c='r')
     plt.show()
 
 

@@ -50,7 +50,7 @@ class Controller1D(ControllerND):
         assert simulation.is_initialised
 
         # Initialise mesh variables
-        self.mesh = simulation.mesh
+        self.x = simulation.x
         self.densities = simulation.densities
         self.pressures = simulation.pressures
         self.velocities = simulation.vel_x
@@ -184,7 +184,7 @@ class Controller1D(ControllerND):
             times.append(t)
             print str(ts) + ": " + str(t)
 
-        return times, self.mesh, self.densities, self.pressures, self.velocities, self.internal_energies
+        return times, self.x, self.densities, self.pressures, self.velocities, self.internal_energies
 
 
 class Controller2D(ControllerND):
@@ -193,7 +193,8 @@ class Controller2D(ControllerND):
         assert simulation.is_initialised
 
         # Initialise mesh variables
-        self.mesh = simulation.mesh
+        self.x = simulation.x
+        self.y = simulation.y
         self.densities = simulation.densities
         self.pressures = simulation.pressures
         self.vel_x = simulation.vel_x
@@ -375,4 +376,4 @@ class Controller2D(ControllerND):
             times.append(t)
             print str(ts) + ": " + str(t)
 
-        return times, self.mesh, self.densities, self.pressures, self.vel_x, self.vel_y, self.internal_energies
+        return times, self.x, self.y, self.densities, self.pressures, self.vel_x, self.vel_y, self.internal_energies

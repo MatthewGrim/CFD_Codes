@@ -31,13 +31,12 @@ class RandomFluid2D(BaseSimulation2D):
         super(RandomFluid2D, self).__init__()
 
         # Set up mesh
-        self.dx = 1.0 / num_pts
-        self.dy = 1.0 / num_pts
-        x = np.linspace(self.dx / 2.0, 1.0, num_pts)
-        y = np.linspace(self.dy / 2.0, 1.0, num_pts)
-        self.mesh = np.zeros((2, num_pts))
-        self.mesh[0, :] = x
-        self.mesh[1, :] = y
+        x = np.linspace(1.0 / num_pts, 1.0, num_pts)
+        y = np.linspace(1.0 / num_pts, 1.0, num_pts)
+        self.x = x
+        self.y = y
+        self.dx = x[1] - x[0]
+        self.dy = y[1] - y[0]
 
         self.final_time = final_time
         self.CFL = CFL
@@ -75,7 +74,7 @@ def example_2d():
     mean_state = ThermodynamicState2D(1e5, 1.225, 0.0, 0.0, 1.4)
     std_dev = 0.25
 
-    random_sim = RandomFluid2D(mean_state, std_dev, 0.3, 0.5, FluxCalculator2D.GODUNOV, 20)
+    random_sim = RandomFluid2D(mean_state, std_dev, 0.3, 0.5, FluxCalculator2D.GODUNOV, 8)
     controller = Controller2D(random_sim)
 
     initial_rho = controller.densities
@@ -84,9 +83,9 @@ def example_2d():
     initial_vel_y = controller.vel_y
     initial_e = controller.internal_energies
 
-    t, mesh, rho, p, u, v, e_int = controller.run_sim()
+    t, x, y, rho, p, u, v, e_int = controller.run_sim()
 
-    X, Y = np.meshgrid(mesh[0, :], mesh[1, :])
+    X, Y = np.meshgrid(x, y)
     fig, ax = plt.subplots(5, 2)
 
     im = ax[0, 0].contourf(X, Y, initial_rho, 100)

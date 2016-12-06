@@ -30,8 +30,8 @@ class ShockTube1D(BaseSimulation1D):
 
         super(ShockTube1D, self).__init__()
 
-        self.mesh = np.linspace(0.005, 0.995, 100)
-        self.dx = self.mesh[0] * 2
+        self.x = np.linspace(0.005, 0.995, 100)
+        self.dx = self.x[0] * 2
         self.final_time = final_time
         self.CFL = CFL
         self.flux_calculator = flux_calculator
@@ -42,7 +42,7 @@ class ShockTube1D(BaseSimulation1D):
         self.vel_x = list()
         self.internal_energies = list()
         self.gamma = left_state.gamma
-        for x_loc in self.mesh:
+        for x_loc in self.x:
             if x_loc < membrane_location:
                 self.densities.append(left_state.rho)
                 self.pressures.append(left_state.p)

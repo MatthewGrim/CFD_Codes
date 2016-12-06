@@ -8,7 +8,7 @@ This file contains the base simulation class for running problems with Riemann s
 
 class BaseSimulationND(object):
     def __init__(self):
-        self.mesh = 0
+        self.x = 0
         self.densities = 0
         self.pressures = 0
         self.vel_x = 0
@@ -32,6 +32,7 @@ class BaseSimulation1D(BaseSimulationND):
 
 class BaseSimulation2D(BaseSimulationND):
     def __init__(self):
+        self.y = 0
         self.vel_y = 0.0
         self.dy = 0.0
 

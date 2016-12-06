@@ -26,8 +26,6 @@ class AnalyticNoh(object):
         assert isinstance(state, ThermodynamicState1D)
         assert isinstance(x_max, float)
         assert isinstance(num_pts, int)
-        # assert state.e_int == 0
-        # assert state.p == 0
 
         self.initial_state = state
         self.num_pts = num_pts
@@ -69,8 +67,8 @@ class Noh1D(BaseSimulation1D):
 
         super(Noh1D, self).__init__()
 
-        self.mesh = np.linspace(0.002, 0.4, 100)
-        self.dx = self.mesh[0] * 2
+        self.x = np.linspace(0.002, 0.4, 100)
+        self.dx = self.x[1] - self.x[0]
         self.final_time = final_time
         self.CFL = CFL
         self.flux_calculator = flux_calculator
@@ -81,7 +79,7 @@ class Noh1D(BaseSimulation1D):
         self.vel_x = list()
         self.internal_energies = list()
         self.gamma = initial_state.gamma
-        for x_loc in self.mesh:
+        for x_loc in self.x:
             self.densities.append(initial_state.rho)
             self.pressures.append(initial_state.p)
             self.vel_x.append(initial_state.u)
@@ -108,27 +106,27 @@ class Noh2D(BaseSimulation2D):
 
         super(Noh2D, self).__init__()
 
-        num_pts = 100
-        x = np.linspace(0.002, 0.4, num_pts)
-        y = np.linspace(0.002, 0.4, num_pts)
-        self.mesh = np.zeros((2, num_pts))
-        self.mesh[0, :] = x
-        self.mesh[1, :] = y
-        self.dx = 0.001
-        self.dy = 0.001
+        num_x = 100
+        num_y = 5
+        x = np.linspace(0.4 / num_x, 0.4, num_x)
+        y = np.linspace(0.4 / num_y, 0.4, num_y)
+        self.x = x
+        self.y = y
+        self.dx = x[1] - x[0]
+        self.dy = y[1] - y[0]
         self.final_time = final_time
         self.CFL = CFL
         self.flux_calculator = flux_calculator
 
         # Initialise physical states
-        self.densities = np.zeros((num_pts, num_pts))
+        self.densities = np.zeros((num_x, num_y))
         self.pressures = np.zeros(self.densities.shape)
         self.vel_x = np.zeros(self.densities.shape)
         self.vel_y = np.zeros(self.densities.shape)
         self.internal_energies = np.zeros(self.densities.shape)
         self.gamma = initial_state.gamma
-        for i in range(num_pts):
-            for j in range(num_pts):
+        for i in range(num_x):
+            for j in range(num_y):
                 self.densities[i, j] = initial_state.rho
                 self.pressures[i, j] = initial_state.p
                 self.vel_x[i, j] = initial_state.u
@@ -207,11 +205,37 @@ def test_noh_2d():
     # Run Noh sim with Godunov and Random Choice
     noh_god = Noh2D(initial_state, final_time=0.3, CFL=0.45, flux_calculator=FluxCalculator2D.GODUNOV)
     godunov_sim = Controller2D(noh_god)
-    (times_god, x_god, densities_god, pressures_god, vel_x_god, vel_y_god, internal_energies_god) = godunov_sim.run_sim()
+    (times_god, x_god, y_god, densities_god, pressures_god, vel_x_god, vel_y_god, internal_energies_god) = godunov_sim.run_sim()
 
-    print densities_god
+    X, Y = np.meshgrid(x_god, y_god)
+    X = np.transpose(X)
+    Y = np.transpose(Y)
+    fig, ax = plt.subplots(5)
+
+    im = ax[0].contourf(X, Y, densities_god, 100)
+    fig.colorbar(im, ax=ax[0])
+    ax[0].set_title("Densities")
+
+    im = ax[1].contourf(X, Y, pressures_god, 100)
+    fig.colorbar(im, ax=ax[1])
+    ax[1].set_title("Pressures")
+
+    im = ax[2].contourf(X, Y, vel_x_god, 100)
+    fig.colorbar(im, ax=ax[2])
+    ax[2].set_title("X Velocities")
+
+    im = ax[3].contourf(X, Y, vel_y_god)
+    fig.colorbar(im, ax=ax[3])
+    ax[3].set_title("Y Velocities")
+
+    im = ax[4].contourf(X, Y, internal_energies_god, 100)
+    fig.colorbar(im, ax=ax[4])
+    ax[4].set_title("Internal Energies")
+
+    fig.suptitle("Noh Problem 2D")
+    plt.show()
 
 
 if __name__ == '__main__':
     test_noh_1d()
-    # test_noh_2d()
+    test_noh_2d()

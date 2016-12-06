@@ -38,6 +38,9 @@ class VanDerCorput(object):
 
     @staticmethod
     def alter_coefficients(a, k_1, k_2):
+        """
+        Convert coefficients a to A
+        """
         assert isinstance(k_1, int)
         assert isinstance(k_2, int)
 
@@ -49,15 +52,38 @@ class VanDerCorput(object):
 
     @staticmethod
     def calculate_theta(n, k_1, k_2):
-        a = VanDerCorput.get_coefficients(n, k_1)
-        A = VanDerCorput.alter_coefficients(a, k_1, k_2)
+        """
+        See Toro Chapter 6 for full explanation of pseudo random number generator
+        :param n: sequence of number
+        :param k_1: coefficient of algorithm
+        :param k_2: coefficient of algorithm
+        :return: random number between 0 and 1
+        """
+        assert isinstance(n, int)
+        assert isinstance(k_1, int)
+        assert isinstance(k_2, int)
 
+        m = np.floor(math.log(n, k_1))
+
+        # Generate coefficients
+        a = np.zeros(m + 1)
+        i = m
+        remainder = n
         theta = 0
-        for i, A_i in enumerate(A):
-            theta += A_i * k_1 ** (-(i + 1))
+        while i >= 0:
+            a[i] = int(remainder / (k_1 ** i))
+            a[i] = np.mod(k_2 * a[i], k_1)
+            remainder = np.mod(remainder, k_1 ** i)
+            theta += a[i] * k_1 ** (-(i + 1))
+            i -= 1
+
         return theta
 
-if __name__ == '__main__':
+
+def example():
     for i in range(1, 8):
         theta = VanDerCorput.calculate_theta(i, 2, 1)
         print(theta)
+
+if __name__ == '__main__':
+    example()

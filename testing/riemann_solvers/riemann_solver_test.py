@@ -8,7 +8,7 @@ This file contains tests for an exact riemann solver
 import unittest
 
 from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import RiemannSolver
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
+from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
 
 
 class RiemannSolverTest(unittest.TestCase):
@@ -35,8 +35,8 @@ class RiemannSolverTest(unittest.TestCase):
         exact_u_star = [0.92745, 0.0000, 19.5975, -6.19633, 8.68975]
 
         for i in range(0, 5):
-            left = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
-            right = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
+            left = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
+            right = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 
             self.sod_test(gamma, left, right, exact_p_star[i], exact_u_star[i])
 

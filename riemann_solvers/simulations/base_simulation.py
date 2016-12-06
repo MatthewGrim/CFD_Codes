@@ -11,7 +11,7 @@ class BaseSimulationND(object):
         self.mesh = 0
         self.densities = 0
         self.pressures = 0
-        self.velocities = 0
+        self.vel_x = 0
         self.internal_energies = 0
         self.dx = 0
         self.gamma = 0
@@ -32,4 +32,7 @@ class BaseSimulation1D(BaseSimulationND):
 
 class BaseSimulation2D(BaseSimulationND):
     def __init__(self):
+        self.vel_y = 0.0
+        self.dy = 0.0
+
         super(BaseSimulation2D, self).__init__()

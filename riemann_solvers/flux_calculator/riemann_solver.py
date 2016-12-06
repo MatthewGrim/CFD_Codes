@@ -8,7 +8,7 @@ follows that in Toro - Chapter 4.
 
 import numpy as np
 
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
+from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
 
 
 class RiemannSolver(object):
@@ -153,8 +153,8 @@ class RiemannSolver(object):
 
         :return: the star pressure and velocity states
         """
-        assert isinstance(left_state, ThermodynamicState)
-        assert isinstance(right_state, ThermodynamicState)
+        assert isinstance(left_state, ThermodynamicState1D)
+        assert isinstance(right_state, ThermodynamicState1D)
 
         # Check for vacuum generation
         if RiemannSolver.is_vacuum_generated(left_state, right_state):
@@ -188,29 +188,31 @@ class RiemannSolver(object):
         S_R = right_state.u - 2 * right_state.sound_speed() / (self.gamma - 1.0)
 
         if x_over_t <= (left_state.u - left_state.sound_speed()):
-            return left_state.p, left_state.u, left_state.rho
+            return left_state.p, left_state.u, left_state.rho, True
         elif x_over_t <= S_L:
             multiplier = ((2.0 / (gamma + 1)) + (gamma - 1) * (left_state.u - x_over_t) / (left_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
             rho = left_state.rho * multiplier
             u = (2.0 / (gamma + 1)) * (left_state.sound_speed() + (gamma - 1) * left_state.u / 2.0 + x_over_t)
             p = left_state.p * multiplier ** gamma
-            return p, u, rho
+            return p, u, rho, True
         elif S_L < x_over_t < S_R:
-            return 0.0, S_L, 0.0
+            return 0.0, S_L, 0.0, True
         elif x_over_t < right_state.u + right_state.sound_speed():
             multiplier = ((2.0 / (gamma + 1)) - (gamma - 1) * (right_state.u - x_over_t) / (right_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
             rho = right_state.rho * multiplier
             u = (2.0 / (gamma + 1)) * (-right_state.sound_speed() + (gamma - 1) * right_state.u / 2.0 + x_over_t)
             p = right_state.p * multiplier ** gamma
-            return p, u, rho
+            return p, u, rho, False
         elif x_over_t >= right_state.u + right_state.sound_speed():
-            return right_state.p, right_state.u, right_state.rho
+            return right_state.p, right_state.u, right_state.rho, False
         else:
             raise RuntimeError("Shouldn't be possible to get here")
 
     def sample(self, x_over_t, left_state, right_state, p_star, u_star):
         """
         Function used to sample Riemann problem at a specific wave speed, to get the state
+
+        Last returned value is a boolean determining whether the state returned is on the left side of the contact
         """
         # Check if state is a vacuum
         if RiemannSolver.is_vacuum_generated(left_state, right_state):
@@ -228,23 +230,23 @@ class RiemannSolver(object):
                     wave_right_high = right_state.u + right_state.sound_speed()
                     wave_right_low = u_star + a_star
                     if wave_right_high <= x_over_t:
-                        return right_state.p, right_state.u, right_state.rho
+                        return right_state.p, right_state.u, right_state.rho, False
                     else:
                         if wave_right_low >= x_over_t:
-                            return p_star, u_star, rho_star
+                            return p_star, u_star, rho_star, False
                         else:
                             multiplier = ((2.0 / (gamma + 1)) - (gamma - 1) * (right_state.u - x_over_t) / (right_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
                             rho = right_state.rho * multiplier
                             u = (2.0 / (gamma + 1)) * (-right_state.sound_speed() + (gamma - 1) * right_state.u / 2.0 + x_over_t)
                             p = right_state.p * multiplier ** gamma
-                            return p, u, rho
+                            return p, u, rho, False
                 else:
                     rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
                     wave_right_shock = right_state.u + right_state.sound_speed() * ((gamma + 1) * p_star / (2 * gamma * right_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
                     if wave_right_shock <= x_over_t:
-                        return right_state.p, right_state.u, right_state.rho
+                        return right_state.p, right_state.u, right_state.rho, False
                     else:
-                        return p_star, u_star, rho_star
+                        return p_star, u_star, rho_star, False
             else:
                 # Consider left wave structures
                 rho = left_state.rho
@@ -256,23 +258,23 @@ class RiemannSolver(object):
                     wave_left_high = left_state.u - left_state.sound_speed()
                     wave_left_low = u_star - a_star
                     if wave_left_high >= x_over_t:
-                        return left_state.p, left_state.u, left_state.rho
+                        return left_state.p, left_state.u, left_state.rho, True
                     else:
                         if wave_left_low <= x_over_t:
-                            return p_star, u_star, rho_star
+                            return p_star, u_star, rho_star, True
                         else:
                             multiplier = ((2.0 / (gamma + 1)) + (gamma - 1) * (left_state.u - x_over_t) / (left_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
                             rho = left_state.rho * multiplier
                             u = (2.0 / (gamma + 1)) * (left_state.sound_speed() + (gamma - 1) * left_state.u / 2.0 + x_over_t)
                             p = left_state.p * multiplier ** gamma
-                            return p, u, rho
+                            return p, u, rho, True
                 else:
                     rho_star = rho * ((p_star / p + (gamma - 1) / (gamma + 1)) / ((gamma - 1) / (gamma + 1) * (p_star / p) + 1))
                     wave_left_shock = left_state.u - left_state.sound_speed() * ((gamma + 1) * p_star / (2 * gamma * left_state.p) + (gamma - 1) / (2 * gamma)) ** 0.5
                     if wave_left_shock >= x_over_t:
-                        return left_state.p, left_state.u, left_state.rho
+                        return left_state.p, left_state.u, left_state.rho, True
                     else:
-                        return p_star, u_star, rho_star
+                        return p_star, u_star, rho_star, True
 
 
 def test_iterative_scheme():
@@ -293,8 +295,8 @@ def test_iterative_scheme():
     for i in range(0, 5):
         print "Riemann Test: " + str(i + 1)
 
-        left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
-        right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
+        left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
+        right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 
         p_star, u_star = solver.get_star_states(left_state, right_state)
 

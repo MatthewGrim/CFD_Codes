@@ -9,10 +9,10 @@ this file should replicate the results from Toro - Chapter 6
 import numpy as np
 from matplotlib import pyplot as plt
 
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
+from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
 from CFD_Projects.riemann_solvers.simulations.analytic_shock_tube import AnalyticShockTube
 from CFD_Projects.riemann_solvers.simulations.base_simulation import BaseSimulation1D
-from CFD_Projects.riemann_solvers.flux_calculator.flux_calculator import FluxCalculator
+from CFD_Projects.riemann_solvers.flux_calculator.flux_calculator import FluxCalculator1D
 from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryConditionND
 from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryCondition1D
 from CFD_Projects.riemann_solvers.controller import Controller1D
@@ -20,8 +20,8 @@ from CFD_Projects.riemann_solvers.controller import Controller1D
 
 class ShockTube1D(BaseSimulation1D):
     def __init__(self, left_state, right_state, membrane_location, final_time, CFL, flux_calculator):
-        assert(isinstance(left_state, ThermodynamicState))
-        assert(isinstance(right_state, ThermodynamicState))
+        assert(isinstance(left_state, ThermodynamicState1D))
+        assert(isinstance(right_state, ThermodynamicState1D))
         assert(isinstance(membrane_location, float))
         assert(isinstance(CFL, float))
         assert(isinstance(final_time, float))
@@ -39,23 +39,23 @@ class ShockTube1D(BaseSimulation1D):
         # Initialise physical states
         self.densities = list()
         self.pressures = list()
-        self.velocities = list()
+        self.vel_x = list()
         self.internal_energies = list()
         self.gamma = left_state.gamma
         for x_loc in self.mesh:
             if x_loc < membrane_location:
                 self.densities.append(left_state.rho)
                 self.pressures.append(left_state.p)
-                self.velocities.append(left_state.u)
+                self.vel_x.append(left_state.u)
                 self.internal_energies.append(left_state.e_int)
             else:
                 self.densities.append(right_state.rho)
                 self.pressures.append(right_state.p)
-                self.velocities.append(right_state.u)
+                self.vel_x.append(right_state.u)
                 self.internal_energies.append(right_state.e_int)
         self.densities = np.asarray(self.densities)
         self.pressures = np.asarray(self.pressures)
-        self.velocities = np.asarray(self.velocities)
+        self.vel_x = np.asarray(self.vel_x)
         self.internal_energies = np.asarray(self.internal_energies)
 
         self.boundary_functions = {
@@ -81,15 +81,15 @@ def example():
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
     for i in range(0, 5):
-        left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
-        right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
+        left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
+        right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 
         shock_tube_god = ShockTube1D(left_state, right_state, membrane_location[i],
                                      final_time=end_times[i], CFL=0.45,
-                                     flux_calculator=FluxCalculator.GODUNOV)
+                                     flux_calculator=FluxCalculator1D.GODUNOV)
         shock_tube_rc = ShockTube1D(left_state, right_state, membrane_location[i],
                                     final_time=end_times[i], CFL=0.45,
-                                    flux_calculator=FluxCalculator.RANDOM_CHOICE)
+                                    flux_calculator=FluxCalculator1D.RANDOM_CHOICE)
 
         # Get Godunov and Random Choice solutions
         godunov_sim = Controller1D(shock_tube_god)

@@ -7,7 +7,7 @@ This file contains tests for thermodynamic state
 
 import unittest
 
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
+from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
 
 
 class TestThermodynamicState(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestThermodynamicState(unittest.TestCase):
         rho = 1.225
         gamma = 1.4
 
-        air_state = ThermodynamicState(pressure, rho, 0.0, gamma)
+        air_state = ThermodynamicState1D(pressure, rho, 0.0, gamma)
 
         self.assertTrue(333 < air_state.sound_speed() < 340)
 

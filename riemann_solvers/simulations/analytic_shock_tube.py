@@ -9,14 +9,14 @@ solution. This problem type is not part of the simulation hierarchy because it i
 import numpy as np
 from matplotlib import pyplot as plt
 
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState
+from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
 from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import RiemannSolver
 
 
 class AnalyticShockTube(object):
     def __init__(self, left_state, right_state, membrane_location, num_pts):
-        assert isinstance(left_state, ThermodynamicState)
-        assert isinstance(right_state, ThermodynamicState)
+        assert isinstance(left_state, ThermodynamicState1D)
+        assert isinstance(right_state, ThermodynamicState1D)
         assert left_state.gamma == right_state.gamma
 
         self.left_state = left_state
@@ -42,7 +42,7 @@ class AnalyticShockTube(object):
         for i, x_pos in enumerate(self.x):
             x_over_t = (x_pos - membrane_loc) / time
 
-            p, u, rho = self.solver.sample(x_over_t, self.left_state, self.right_state, p_star, u_star)
+            p, u, rho, _ = self.solver.sample(x_over_t, self.left_state, self.right_state, p_star, u_star)
 
             self.rho[i] = rho
             self.u[i] = u
@@ -68,8 +68,8 @@ def test_sod_problems():
     x = [0.5, 0.5, 0.5, 0.5, 0.5, 0.3]
 
     for i in range(0, 6):
-        left_state = ThermodynamicState(p_left[i], rho_left[i], u_left[i], gamma)
-        right_state = ThermodynamicState(p_right[i], rho_right[i], u_right[i], gamma)
+        left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
+        right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 
         sod_test = AnalyticShockTube(left_state, right_state, x[i], 1000)
 

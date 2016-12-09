@@ -72,6 +72,9 @@ class ThermodynamicState2D(object):
         self.e_kin = 0.5 * self.rho * self.u * self.u + 0.5 * self.rho * self.v * self.v
         self.e_int = pressure / (self.rho * (gamma - 1))
 
+    def sound_speed(self):
+        return np.sqrt(self.gamma * self.p / self.rho)
+
     def update_states(self, density_flux, momentum_flux_x, momentum_flux_y, e_flux):
         """
         Updates the thermodynamic state of the cell based on conservative fluxes into volume

@@ -122,7 +122,7 @@ class FluxCalculator2D(FluxCalculatorND):
                 density_fluxes[i, j - 1, 0] = rho_flux * u_flux
                 momentum_flux_x[i, j - 1, 0] = rho_flux * u_flux * u_flux + p_flux
                 momentum_flux_y[i, j - 1, 0] = rho_flux * u_flux * v_y
-                e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux + 0.5 * v_y ** 2
+                e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux + 0.5 * rho_flux * v_y ** 2
                 total_energy_fluxes[i, j - 1, 0] = (p_flux + e_tot) * u_flux
 
                 # Generate left and right states from cell averaged values
@@ -140,7 +140,7 @@ class FluxCalculator2D(FluxCalculatorND):
                 density_fluxes[i - 1, j, 1] = rho_flux * v_flux
                 momentum_flux_x[i - 1, j, 1] = rho_flux * v_x * v_flux
                 momentum_flux_y[i - 1, j, 1] = rho_flux * v_flux * v_flux + p_flux
-                e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * v_flux * v_flux + 0.5 * v_x ** 2
+                e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * v_flux * v_flux + 0.5 * rho_flux * v_x ** 2
                 total_energy_fluxes[i - 1, j, 1] = (p_flux + e_tot) * v_flux
 
         return density_fluxes, momentum_flux_x, momentum_flux_y, total_energy_fluxes

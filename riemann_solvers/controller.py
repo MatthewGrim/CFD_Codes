@@ -347,6 +347,7 @@ class Controller2D(ControllerND):
 
                 state = ThermodynamicState2D(self.pressures[i, j], self.densities[i, j],
                                              self.vel_x[i, j], self.vel_y[i, j], self.gamma)
+
                 state.update_states(total_density_flux, total_momentum_flux_x, total_momentum_flux_y,
                                     total_energy_flux)
 
@@ -356,7 +357,6 @@ class Controller2D(ControllerND):
                 self.vel_y[i, j] = state.v
                 self.internal_energies[i, j] = state.e_int
 
-                # print(total_density_flux)
                 total_dens_flux += total_density_flux
                 total_mom_flux_x += total_momentum_flux_x
                 total_mom_flux_y += total_momentum_flux_y
@@ -374,6 +374,6 @@ class Controller2D(ControllerND):
             t += dt
             ts += 1
             times.append(t)
-            print str(ts) + ": " + str(t)
+            print "Step " + str(ts) + ": " + str(t)
 
         return times, self.x, self.y, self.densities, self.pressures, self.vel_x, self.vel_y, self.internal_energies

@@ -134,13 +134,13 @@ class Noh2D(BaseSimulation2D):
                 self.internal_energies[i, j] = initial_state.e_int
 
         self.boundary_functions = {
-            BoundaryConditionND.X_LOW: lambda state : BoundaryCondition2D.reflecting_boundary_condition(state,
+            BoundaryConditionND.X_LOW: lambda state, y_loc : BoundaryCondition2D.reflecting_boundary_condition(state,
                                                                                                         BoundaryConditionND.X_LOW),
-            BoundaryConditionND.X_HIGH: lambda state : BoundaryCondition2D.transmissive_boundary_condition(state,
+            BoundaryConditionND.X_HIGH: lambda state, y_loc : BoundaryCondition2D.transmissive_boundary_condition(state,
                                                                                                         BoundaryConditionND.X_HIGH),
-            BoundaryConditionND.Y_LOW: lambda state : BoundaryCondition2D.transmissive_boundary_condition(state,
+            BoundaryConditionND.Y_LOW: lambda state, x_loc : BoundaryCondition2D.transmissive_boundary_condition(state,
                                                                                                         BoundaryConditionND.Y_LOW),
-            BoundaryConditionND.Y_HIGH: lambda state : BoundaryCondition2D.transmissive_boundary_condition(state,
+            BoundaryConditionND.Y_HIGH: lambda state, x_loc : BoundaryCondition2D.transmissive_boundary_condition(state,
                                                                                                         BoundaryConditionND.Y_HIGH)
         }
 
@@ -237,5 +237,5 @@ def test_noh_2d():
 
 
 if __name__ == '__main__':
-    test_noh_1d()
+    # test_noh_1d()
     test_noh_2d()

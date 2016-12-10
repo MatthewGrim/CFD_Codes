@@ -57,13 +57,13 @@ class RandomFluid2D(BaseSimulation2D):
                 self.internal_energies[i, j] = np.abs(random.normalvariate(mean_state.e_int, standard_deviation * mean_state.e_int))
 
         self.boundary_functions = {
-            BoundaryConditionND.X_LOW: lambda state : BoundaryCondition2D.reflecting_boundary_condition(state,
+            BoundaryConditionND.X_LOW: lambda state, y_loc: BoundaryCondition2D.reflecting_boundary_condition(state,
                                                                                                         BoundaryCondition2D.X_LOW),
-            BoundaryConditionND.X_HIGH: lambda state : BoundaryCondition2D.reflecting_boundary_condition(state,
+            BoundaryConditionND.X_HIGH: lambda state, y_loc: BoundaryCondition2D.reflecting_boundary_condition(state,
                                                                                                         BoundaryCondition2D.X_HIGH),
-            BoundaryConditionND.Y_LOW: lambda state : BoundaryCondition2D.reflecting_boundary_condition(state,
+            BoundaryConditionND.Y_LOW: lambda state, x_loc: BoundaryCondition2D.reflecting_boundary_condition(state,
                                                                                                         BoundaryCondition2D.Y_LOW),
-            BoundaryConditionND.Y_HIGH: lambda state : BoundaryCondition2D.reflecting_boundary_condition(state,
+            BoundaryConditionND.Y_HIGH: lambda state, x_loc: BoundaryCondition2D.reflecting_boundary_condition(state,
                                                                                                         BoundaryCondition2D.Y_HIGH)
         }
 

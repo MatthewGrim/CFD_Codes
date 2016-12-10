@@ -240,7 +240,7 @@ class Controller2D(ControllerND):
         for j in range(j_length):
             start_state = ThermodynamicState2D(self.pressures[0, j], self.densities[0, j],
                                                self.vel_x[0, j], self.vel_y[0, j], self.gamma)
-            start_state = self.boundary_functions[BoundaryConditionND.X_LOW](start_state)
+            start_state = self.boundary_functions[BoundaryConditionND.X_LOW](start_state, self.y[j])
             new_densities[0, j + 1] = start_state.rho
             new_pressures[0, j + 1] = start_state.p
             new_vel_x[0, j + 1] = start_state.u
@@ -249,7 +249,7 @@ class Controller2D(ControllerND):
 
             end_state = ThermodynamicState2D(self.pressures[-1, j], self.densities[-1, j], self.vel_x[-1, j],
                                              self.vel_y[-1, j], self.gamma)
-            end_state = self.boundary_functions[BoundaryConditionND.X_HIGH](end_state)
+            end_state = self.boundary_functions[BoundaryConditionND.X_HIGH](end_state, self.y[j])
             new_densities[-1, j + 1] = end_state.rho
             new_pressures[-1, j + 1] = end_state.p
             new_vel_x[-1, j + 1] = end_state.u
@@ -258,9 +258,15 @@ class Controller2D(ControllerND):
 
         # Handle y boundaries
         for i in range(i_length + 2):
+            if i == 0:
+                x = self.x[0]
+            elif i == i_length + 1:
+                x = self.x[i_length - 1]
+            else:
+                x = self.x[i - 1]
             start_state = ThermodynamicState2D(new_pressures[i, 1], new_densities[i, 1], new_vel_x[i, 1],
                                                new_vel_y[i, 1], self.gamma)
-            start_state = self.boundary_functions[BoundaryConditionND.Y_LOW](start_state)
+            start_state = self.boundary_functions[BoundaryConditionND.Y_LOW](start_state, x)
             new_densities[i, 0] = start_state.rho
             new_pressures[i, 0] = start_state.p
             new_vel_x[i, 0] = start_state.u
@@ -269,7 +275,7 @@ class Controller2D(ControllerND):
 
             end_state = ThermodynamicState2D(new_pressures[i, -2], new_densities[i, -2], new_vel_x[i, -2],
                                              new_vel_y[i, -2], self.gamma)
-            end_state = self.boundary_functions[BoundaryConditionND.Y_HIGH](end_state)
+            end_state = self.boundary_functions[BoundaryConditionND.Y_HIGH](end_state, x)
             new_densities[i, -1] = end_state.rho
             new_pressures[i, -1] = end_state.p
             new_vel_x[i, -1] = end_state.u
@@ -372,8 +378,8 @@ class Controller2D(ControllerND):
         while t < self.final_time:
             dt = self._evolve_time_step(ts)
             t += dt
-            ts += 1
             times.append(t)
             print "Step " + str(ts) + ": " + str(t)
+            ts += 1
 
         return times, self.x, self.y, self.densities, self.pressures, self.vel_x, self.vel_y, self.internal_energies

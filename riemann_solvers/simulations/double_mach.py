@@ -33,7 +33,7 @@ class DoubleMach2D(BaseSimulation2D):
         theta = np.pi / 6.0
 
         # Set up mesh
-        x = np.linspace(1.0 / num_x, 3.5, num_x)
+        x = np.linspace(1.0 / num_x, 4.0, num_x)
         y = np.linspace(1.0 / num_y, 1.0, num_y)
         self.x = x
         self.y = y
@@ -59,17 +59,17 @@ class DoubleMach2D(BaseSimulation2D):
         sound_speed = ahead_state.sound_speed()
         u_shock = sound_speed * 10.0 * np.cos(theta)
         v_shock = -sound_speed * 10.0 * np.sin(theta)
-        shock_state = ThermodynamicState2D(p_shock, rho_shock, u_shock, v_shock, self.gamma)
+        self.shock_state = ThermodynamicState2D(p_shock, rho_shock, u_shock, v_shock, self.gamma)
         for i in range(num_x):
             for j in range(num_y):
                 x_pt = self.x[i]
                 y_pt = self.y[j]
-                if x_pt / y_pt <= np.sin(theta):
-                    self.densities[i, j] = shock_state.rho
-                    self.pressures[i, j] = shock_state.p
-                    self.vel_x[i, j] = shock_state.u
-                    self.vel_y[i, j] = shock_state.v
-                    self.internal_energies[i, j] = shock_state.e_int
+                if x_pt <= 0.6 + y_pt * np.tan(theta):
+                    self.densities[i, j] = self.shock_state.rho
+                    self.pressures[i, j] = self.shock_state.p
+                    self.vel_x[i, j] = self.shock_state.u
+                    self.vel_y[i, j] = self.shock_state.v
+                    self.internal_energies[i, j] = self.shock_state.e_int
                 else:
                     self.densities[i, j] = ahead_state.rho
                     self.pressures[i, j] = ahead_state.p
@@ -78,13 +78,13 @@ class DoubleMach2D(BaseSimulation2D):
                     self.internal_energies[i, j] = ahead_state.e_int
 
         self.boundary_functions = {
-            BoundaryConditionND.X_LOW: lambda state : BoundaryCondition2D.transmissive_boundary_condition(state,
-                                                                                                        BoundaryCondition2D.X_LOW),
-            BoundaryConditionND.X_HIGH: lambda state : BoundaryCondition2D.transmissive_boundary_condition(state,
+            BoundaryConditionND.X_LOW: lambda state, y_loc: self.shock_state,
+            BoundaryConditionND.X_HIGH: lambda state, y_loc : BoundaryCondition2D.transmissive_boundary_condition(state,
                                                                                                         BoundaryCondition2D.X_HIGH),
-            BoundaryConditionND.Y_LOW: lambda state : BoundaryCondition2D.reflecting_boundary_condition(state,
-                                                                                                        BoundaryCondition2D.Y_LOW),
-            BoundaryConditionND.Y_HIGH: lambda state : BoundaryCondition2D.transmissive_boundary_condition(state,
+            BoundaryConditionND.Y_LOW: lambda state, x_loc: BoundaryCondition2D.reflecting_boundary_condition(state, BoundaryCondition2D.Y_LOW)
+                                                            if x_loc >= 1.0/6.0 else
+                                                            self.shock_state,
+            BoundaryConditionND.Y_HIGH: lambda state, x_loc: BoundaryCondition2D.transmissive_boundary_condition(state,
                                                                                                         BoundaryCondition2D.Y_HIGH)
         }
 
@@ -93,7 +93,7 @@ class DoubleMach2D(BaseSimulation2D):
 
 def example_2d():
     # This sim is very computationally expensive
-    mach_sim = DoubleMach2D(0.2, 0.5, FluxCalculator2D.GODUNOV, 420, 120)
+    mach_sim = DoubleMach2D(0.2, 0.5, FluxCalculator2D.GODUNOV, 240, 100)
     controller = Controller2D(mach_sim)
 
     initial_rho = controller.densities
@@ -108,31 +108,37 @@ def example_2d():
     X = np.transpose(X)
     Y = np.transpose(Y)
     fig, ax = plt.subplots(5, 2)
+    num_contours = 200
 
-    im = ax[0, 0].contourf(X, Y, initial_rho, 100)
+    im = ax[0, 0].contourf(X, Y, initial_rho, num_contours)
     fig.colorbar(im, ax=ax[0, 0])
-    im = ax[0, 1].contourf(X, Y, rho, 100)
+    im = ax[0, 1].contourf(X, Y, rho, num_contours)
     fig.colorbar(im, ax=ax[0, 1])
+    ax[0, 1].set_title("Density")
 
-    im = ax[1, 0].contourf(X, Y, initial_p, 100)
+    im = ax[1, 0].contourf(X, Y, initial_p, num_contours)
     fig.colorbar(im, ax=ax[1, 0])
-    im = ax[1, 1].contourf(X, Y, p, 100)
+    im = ax[1, 1].contourf(X, Y, p, num_contours)
     fig.colorbar(im, ax=ax[1, 1])
+    ax[1, 1].set_title("Pressure")
 
-    im = ax[2, 0].contourf(X, Y, initial_vel_x, 100)
+    im = ax[2, 0].contourf(X, Y, initial_vel_x, num_contours)
     fig.colorbar(im, ax=ax[2, 0])
-    im = ax[2, 1].contourf(X, Y, u, 100)
+    im = ax[2, 1].contourf(X, Y, u, num_contours)
     fig.colorbar(im, ax=ax[2, 1])
+    ax[2, 1].set_title("X Velocity")
 
     im = ax[3, 0].contourf(X, Y, initial_vel_y)
     fig.colorbar(im, ax=ax[3, 0])
-    im = ax[3, 1].contourf(X, Y, v, 100)
+    im = ax[3, 1].contourf(X, Y, v, num_contours)
     fig.colorbar(im, ax=ax[3, 1])
+    ax[3, 1].set_title("Y Velocity")
 
-    im = ax[4, 0].contourf(X, Y, initial_e, 100)
+    im = ax[4, 0].contourf(X, Y, initial_e, num_contours)
     fig.colorbar(im, ax=ax[4, 0])
-    im = ax[4, 1].contourf(X, Y, e_int, 100)
+    im = ax[4, 1].contourf(X, Y, e_int, num_contours)
     fig.colorbar(im, ax=ax[4, 1])
+    ax[4, 1].set_title("Internal Energy")
 
     fig.savefig("Double_Mach")
     plt.show()

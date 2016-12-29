@@ -1,6 +1,6 @@
 /*
 Author: Rohan Ramasamy
-Data: 31/03/16
+Data: 26/12/16
 
 This file contains unit tests for AirfoilInterpolator
 */
@@ -50,9 +50,9 @@ namespace bem
 	}
 
 	TEST_F(AirfoilInterpolatorTest, InterpolateOnDataPoints) {
-		std::vector<double> alphas = {0.0, 1.0, 2.0, 3.0};
-		std::vector<double> liftCoefficients = {0.0, 1.5, 2.5, 3.0};
-		std::vector<double> dragCoefficients = {0.0, 2.3, 4.6, 3.0};
+		std::vector<double> alphas = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 };
+		std::vector<double> liftCoefficients = { 0.5, 0.575, 0.65, 0.725, 0.8, 0.875, 0.95, 1.025, 1.1, 1.1, 1.0 };
+		std::vector<double> dragCoefficients = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.035, 0.05 };
 		AirfoilInterpolator interpolator(alphas, dragCoefficients, liftCoefficients);
 
 		for (size_t i = 0; i < alphas.size(); ++i) {
@@ -62,24 +62,24 @@ namespace bem
 	}
 
 	TEST_F(AirfoilInterpolatorTest, InterpolateOutsideDataLimits) {
-		std::vector<double> alphas = {0.0, 1.0, 2.0, 3.0};
-		std::vector<double> liftCoefficients = {0.0, 1.5, 2.5, 3.0};
-		std::vector<double> dragCoefficients = {0.0, 2.3, 4.6, 3.0};
+		std::vector<double> alphas = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 };
+		std::vector<double> liftCoefficients = { 0.5, 0.575, 0.65, 0.725, 0.8, 0.875, 0.95, 1.025, 1.1, 1.1, 1.0 };
+		std::vector<double> dragCoefficients = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.035, 0.05 };
 		AirfoilInterpolator interpolator(alphas, dragCoefficients, liftCoefficients);
 
-		EXPECT_ANY_THROW(interpolator.getLiftCoefficient(3.6));
-		EXPECT_ANY_THROW(interpolator.getDragCoefficient(3.6));
+		EXPECT_ANY_THROW(interpolator.getLiftCoefficient(10.6));
+		EXPECT_ANY_THROW(interpolator.getDragCoefficient(10.6));
 		EXPECT_ANY_THROW(interpolator.getLiftCoefficient(-0.1));
 		EXPECT_ANY_THROW(interpolator.getDragCoefficient(-0.1));
 	}
 
 	TEST_F(AirfoilInterpolatorTest, OptimumAngle) {
-		std::vector<double> alphas = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
-		std::vector<double> liftCoefficients = {0.0, 1.5, 2.5, 3.1, 6.6, 3.3};
-		std::vector<double> dragCoefficients = {0.0, 2.3, 4.6, 1.5, 2.2, 4.7};
+		std::vector<double> alphas = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 };
+		std::vector<double> liftCoefficients = { 0.5, 0.575, 0.65, 0.725, 0.8, 0.875, 0.95, 1.025, 1.1, 1.1, 1.0 };
+		std::vector<double> dragCoefficients = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.035, 0.05 };
 		AirfoilInterpolator interpolator(alphas, dragCoefficients, liftCoefficients);
 
-		EXPECT_EQ(4.0, interpolator.getIdealAngleOfAttack());
+		EXPECT_EQ(7.0, interpolator.getIdealAngleOfAttack());
 	}
 
 }

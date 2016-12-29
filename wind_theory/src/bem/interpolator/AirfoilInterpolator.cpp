@@ -9,6 +9,7 @@
  #include "AirfoilInterpolator.h"
  
  #include <cassert>
+ #include <math.h>
  #include <stdexcept>
  #include <iostream>
 
@@ -44,6 +45,7 @@
 	{
 		// Check interpolated alpha is within the range of data
 		if (mAlpha[0] > interpolatedAlpha || mAlpha[mAlpha.size() - 1] < interpolatedAlpha) throw std::runtime_error("Alpha is outside of range!");
+		if (isnan(interpolatedAlpha)) throw std::runtime_error("Alpha is NaN!");
 
 		// Find closest index below interpolated value
 		size_t idx = mAlpha.size() / 2;

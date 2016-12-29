@@ -80,9 +80,23 @@
 	BEMSolver::
 	findRatedCondition()
 	{
+		double powerCoeff = findPowerCoefficient(0.0, mURated);
+
+		mRatedCondition.second = powerCoeff;
+	}
+
+	double
+	BEMSolver::
+	findPowerCoefficient(
+		double activePitch,
+		double windSpeed
+		)
+	{
 		if (!mInitialised) {
 			throw std::runtime_error("BEM Solver is uninitialised!");
 		}
+
+		activePitch = activePitch / 180.0 * M_PI;
 
 		// Initialise lambda functions for axial induction factors
 		auto getAxialFactor = [](double tipLoss, double solidity, double liftCoeff, double twist) {
@@ -95,14 +109,14 @@
 
 		auto getAngularFactor = [](double tipLoss, double solidity, double liftCoeff, double twist) {
 			double denominator = 4.0 * tipLoss * cos(twist);
-			denominator /= solidity * liftCoeff;
+			denominator /= (solidity * liftCoeff);
 			denominator -= 1.0;
 
 			return 1.0 / denominator;
 		};
 
 		auto getTwist = [](double axialFactor, double angularFactor, double lambda) {
-			return atan((1.0 - axialFactor) / (1 + angularFactor) * lambda);
+			return atan((1.0 - axialFactor) / ((1 + angularFactor) * lambda));
 		};
 
 		auto getTipLoss = [](double radiusRatio, double twist, int numBlades) {
@@ -125,62 +139,74 @@
 		std::vector<double> angularFactors(mChord.size(), 0.0);
 		std::vector<double> radii(mChord.size(), 0.0);
 		std::vector<double> lambdas(mChord.size(), 0.0);
+		std::vector<double> twists(mChord.size(), 0.0);
 		for (size_t i = 0; i < axialFactors.size(); ++i) {
-			axialFactors[i] = getAxialFactor(1.0, mLocalSolidity[i], designLift, mInherantTwist[i]);
-			angularFactors[i] = getAngularFactor(1.0, mLocalSolidity[i], designLift, mInherantTwist[i]);
-
 			double localRadius = (static_cast<double>(i) + 0.5) / mChord.size() * mRadius;
 			radii[i] = localRadius;
-			lambdas[i] = localRadius * mWRated / mURated;
+			lambdas[i] = localRadius * mWRated / windSpeed;
+			twists[i] = mInherantTwist[i];
+
+			axialFactors[i] = getAxialFactor(1.0, mLocalSolidity[i], designLift, twists[i]);
+			angularFactors[i] = (1.0 - 3.0 * axialFactors[i]) / (4.0 * axialFactors[i] - 1.0);
 		}
-		double liftCoefficient = mAirfoil.getLiftCoefficient(mAlpha);
-		double dragCoefficient = mAirfoil.getDragCoefficient(mAlpha);
 
 		// Loop through induction factor iteration
 		double axialDiff = 1.0;
 		double angularDiff = 1.0;
 		double TOL = 1e-4;
-		for (size_t i = 0; i < axialFactors.size(); ++i) {	
+		double tipLoss = 1.0;
+		for (size_t i = 0; i < axialFactors.size(); ++i) {
+			double liftCoefficient = mAirfoil.getLiftCoefficient(mAlpha);
+			double dragCoefficient = mAirfoil.getDragCoefficient(mAlpha);
+			double alpha = mAlpha / 180.0 * M_PI;
 			int numIterations = 0;
 			while (axialDiff > TOL && angularDiff > TOL) {
 				if (numIterations > 1000) {
 					throw std::runtime_error("Maximum number of iterations reached!");
 				}
 
-				axialDiff = 0.0;
-				angularDiff = 0.0;
-
-				double thrustCoeff = getThrustCoefficient(mLocalSolidity[i], liftCoefficient, dragCoefficient,
-				                                          axialFactors[i], mInherantTwist[i]);
-
+				// Get new induction factors
 				double prevAxialFactor = axialFactors[i];
 				double prevAngularFactor = angularFactors[i];
-
-				mInherantTwist[i] = getTwist(axialFactors[i], angularFactors[i], lambdas[i]);
-				double tipLoss = getTipLoss(radii[i] / mRadius, mInherantTwist[i], mNumBlades);
-
+				
+				double thrustCoeff = getThrustCoefficient(mLocalSolidity[i], liftCoefficient, dragCoefficient,
+				                                          axialFactors[i], twists[i]);
 				if (thrustCoeff < 0.96) {
 					axialFactors[i] = getAxialFactor(tipLoss, mLocalSolidity[i], 
-						                             liftCoefficient, mInherantTwist[i]);
+						                             liftCoefficient, twists[i]);
 				}
 				else {
-					throw std::runtime_error("Thrust coefficient indicated induction factors are non physical!");
+					axialFactors[i] = (1.0 / tipLoss);
+					axialFactors[i] *= (0.143 + sqrt(0.0203 - 0.6427 * (0.889 - thrustCoeff)));
 				}
 				angularFactors[i] = getAngularFactor(tipLoss, mLocalSolidity[i], 
-					                                 liftCoefficient, mInherantTwist[i]);
+					                                 liftCoefficient, twists[i]);
+
+				// Calculate new twist, coefficients and tip loss
+				twists[i] = getTwist(axialFactors[i], angularFactors[i], lambdas[i]);
+				alpha = twists[i] - mInherantTwist[i] + mAlpha / 180.0 * M_PI - activePitch;
+				liftCoefficient = mAirfoil.getLiftCoefficient(alpha / M_PI * 180.0);
+				dragCoefficient = mAirfoil.getDragCoefficient(alpha / M_PI * 180.0);
+				tipLoss = getTipLoss(radii[i] / mRadius, twists[i], mNumBlades);
 
 				axialDiff = fabs(axialFactors[i] - prevAxialFactor);
 				angularDiff = fabs(angularFactors[i] - prevAngularFactor);
 
 				++numIterations;
 			}
+
+			axialDiff = 1.0;
+			angularDiff = 1.0;
 		}
 		
 		// Calculate Cp
 		double powerCoeff = 0.0;
 		for (size_t i = 0; i < mChord.size(); ++i) {
-			double tipLoss = getTipLoss(radii[i] / mRadius, mInherantTwist[i], mNumBlades);
-			double twist = mInherantTwist[i];
+			double tipLoss = getTipLoss(radii[i] / mRadius, twists[i], mNumBlades);
+			double twist = twists[i];
+			double alpha = twists[i] - mInherantTwist[i] + mAlpha / 180.0 * M_PI - activePitch;
+			double liftCoefficient = mAirfoil.getLiftCoefficient(alpha / M_PI * 180.0);
+			double dragCoefficient = mAirfoil.getDragCoefficient(alpha / M_PI * 180.0);
 
 			double deltaCp = (cos(twist) - lambdas[i] * sin(twist)) * (sin(twist) + lambdas[i] * cos(twist));
 			deltaCp *= tipLoss * pow(sin(twist), 2.0) * pow(lambdas[i], 2.0);
@@ -190,7 +216,6 @@
 		}
 		powerCoeff *= 8 / (mChord.size() * mRatedCondition.first);
 
-		mRatedCondition.second = powerCoeff;
+		return powerCoeff;
 	}
-
  }

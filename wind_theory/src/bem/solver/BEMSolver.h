@@ -115,10 +115,11 @@
  		 *  pitch angle on the blades. This assumes that the angular rotation is fixed at 
  		 *  wRated.
  		 */
-		// findPowerCoefficient(
-		// 	double activePitch,
-		// 	double windSpeed
-		// 	);
+		double
+		findPowerCoefficient(
+			double activePitch,
+			double windSpeed
+			);
 
  		bool mInitialised;
  		int mNumBlades;

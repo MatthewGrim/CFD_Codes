@@ -71,16 +71,15 @@
 		}
 		// Set blade to be initialised
 		mInitialised = true;
-
-		// Calculate Cp
-		findRatedCondition();
 	}
 
 	std::pair<double, double>
 	BEMSolver::
 	findRatedCondition()
 	{
-		double powerCoeff = findPowerCoefficient(0.0, mURated);
+		double powerCoeff = findPowerCoefficient(0.0, mURated, true);
+
+		std::cout << powerCoeff << std::endl;
 
 		mRatedCondition.second = powerCoeff;
 	}
@@ -89,7 +88,8 @@
 	BEMSolver::
 	findPowerCoefficient(
 		double activePitch,
-		double windSpeed
+		double windSpeed,
+		bool isRatedCondition
 		)
 	{
 		if (!mInitialised) {
@@ -154,11 +154,11 @@
 		double axialDiff = 1.0;
 		double angularDiff = 1.0;
 		double TOL = 1e-4;
-		double tipLoss = 1.0;
 		for (size_t i = 0; i < axialFactors.size(); ++i) {
 			double liftCoefficient = mAirfoil.getLiftCoefficient(mAlpha);
 			double dragCoefficient = mAirfoil.getDragCoefficient(mAlpha);
 			double alpha = mAlpha / 180.0 * M_PI;
+			double tipLoss = isRatedCondition ? 1.0 : getTipLoss(radii[i] / mRadius, twists[i], mNumBlades);
 			int numIterations = 0;
 			while (axialDiff > TOL && angularDiff > TOL) {
 				if (numIterations > 1000) {
@@ -184,7 +184,10 @@
 
 				// Calculate new twist, coefficients and tip loss
 				twists[i] = getTwist(axialFactors[i], angularFactors[i], lambdas[i]);
-				alpha = twists[i] - mInherantTwist[i] + mAlpha / 180.0 * M_PI - activePitch;
+				
+				if (!isRatedCondition) {
+					alpha = twists[i] - mInherantTwist[i] + mAlpha / 180.0 * M_PI - activePitch;
+				}
 				liftCoefficient = mAirfoil.getLiftCoefficient(alpha / M_PI * 180.0);
 				dragCoefficient = mAirfoil.getDragCoefficient(alpha / M_PI * 180.0);
 				tipLoss = getTipLoss(radii[i] / mRadius, twists[i], mNumBlades);
@@ -193,6 +196,10 @@
 				angularDiff = fabs(angularFactors[i] - prevAngularFactor);
 
 				++numIterations;
+			}
+
+			if (isRatedCondition) {
+				mInherantTwist[i] = twists[i];
 			}
 
 			axialDiff = 1.0;
@@ -217,5 +224,25 @@
 		powerCoeff *= 8 / (mChord.size() * mRatedCondition.first);
 
 		return powerCoeff;
+	}
+
+	std::vector<double>
+	BEMSolver::
+	calculatePowerCurve(
+		std::vector<double> windSpeeds,
+		double pitchTwist
+		)
+	{
+		std::vector<double> powerCoefficients(windSpeeds.size(), 0.0);
+		std::vector<double> tipSpeedRatios(windSpeeds.size(), 0.0);
+
+		for (size_t i = 0; i < powerCoefficients.size(); ++i) {
+			tipSpeedRatios[i] = mWRated * mRadius / windSpeeds[i];
+			powerCoefficients[i] = findPowerCoefficient(pitchTwist, windSpeeds[i]);
+			
+			std::cout << tipSpeedRatios[i] << " " << powerCoefficients[i] << std::endl;
+		}
+
+		return powerCoefficients;
 	}
  }

@@ -34,9 +34,9 @@ namespace bem
 		double pRated =  0.4 * 1.225 * M_PI / 2.0;
 
 		// Dummy interpolator
-		std::vector<double> alphas = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 };
-		std::vector<double> liftCoefficients = { 0.5, 0.575, 0.65, 0.725, 0.8, 0.875, 0.95, 1.025, 1.1, 1.1, 1.0 };
-		std::vector<double> dragCoefficients = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.035, 0.05 };
+		std::vector<double> alphas = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 16.0 };
+		std::vector<double> liftCoefficients = { 0.5, 0.575, 0.65, 0.725, 0.8, 0.875, 0.95, 1.025, 1.1, 1.1, 1.0, 1.0, 1.0, 1.0 };
+		std::vector<double> dragCoefficients = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.035, 0.05, 0.06, 0.08, 0.11 };
 		AirfoilInterpolator interpolator(alphas, dragCoefficients, liftCoefficients);
 
 		BEMSolver solver(numBlades, pRated, wRated, uRated, interpolator, numPts);
@@ -65,9 +65,9 @@ namespace bem
 		double pRated =  0.4 * 1.225 * M_PI * 6.0 * 6.0 / 2.0;
 
 		// Dummy interpolator
-		std::vector<double> alphas = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 };
-		std::vector<double> liftCoefficients = { 0.5, 0.575, 0.65, 0.725, 0.8, 0.875, 0.95, 1.025, 1.1, 1.1, 1.0 };
-		std::vector<double> dragCoefficients = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.035, 0.05 };
+		std::vector<double> alphas = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 16.0 };
+		std::vector<double> liftCoefficients = { 0.5, 0.575, 0.65, 0.725, 0.8, 0.875, 0.95, 1.025, 1.1, 1.1, 1.0, 1.0, 1.0, 1.0 };
+		std::vector<double> dragCoefficients = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.035, 0.05, 0.06, 0.08, 0.11 };
 		AirfoilInterpolator interpolator(alphas, dragCoefficients, liftCoefficients);
 
 		BEMSolver solver(numBlades, pRated, wRated, uRated, interpolator, numPts);
@@ -85,6 +85,10 @@ namespace bem
 		}
 		double exactSolidity = 0.102;
 		EXPECT_NEAR(exactSolidity, solver.solidity(), 0.01);
+
+		solver.findRatedCondition();
+		std::vector<double> windSpeeds = { 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35 };
+		solver.calculatePowerCurve(windSpeeds, 0.0);
 	}
 
 	TEST_F(BEMSolverTest, idealChordDistributionWithWakeRotationTwoBlades) {
@@ -96,9 +100,9 @@ namespace bem
 		double pRated =  0.4 * 1.225 * M_PI * 10.0 * 10.0 / 2.0;
 
 		// Dummy interpolator
-		std::vector<double> alphas = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0 };
-		std::vector<double> liftCoefficients = { 0.5, 0.575, 0.65, 0.725, 0.8, 0.875, 0.95, 1.025, 1.1, 1.1, 1.0 };
-		std::vector<double> dragCoefficients = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.035, 0.05 };
+		std::vector<double> alphas = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 16.0 };
+		std::vector<double> liftCoefficients = { 0.5, 0.575, 0.65, 0.725, 0.8, 0.875, 0.95, 1.025, 1.1, 1.1, 1.0, 1.0, 1.0, 1.0 };
+		std::vector<double> dragCoefficients = { 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02, 0.035, 0.05, 0.06, 0.08, 0.11 };
 		AirfoilInterpolator interpolator(alphas, dragCoefficients, liftCoefficients);
 
 		BEMSolver solver(numBlades, pRated, wRated, uRated, interpolator, numPts);
@@ -116,5 +120,9 @@ namespace bem
 		}
 		double exactSolidity = 0.046655;
 		EXPECT_NEAR(exactSolidity, solver.solidity(), 0.01);
+
+		solver.findRatedCondition();
+		std::vector<double> windSpeeds = { 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35 };
+		solver.calculatePowerCurve(windSpeeds, 0.0);
 	}
 }

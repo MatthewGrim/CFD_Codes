@@ -12,6 +12,7 @@
  #include <math.h>
  #include <stdexcept>
  #include <iostream>
+ #include <sstream>
 
  namespace bem 
  {
@@ -44,7 +45,11 @@
 		)
 	{
 		// Check interpolated alpha is within the range of data
-		if (mAlpha[0] > interpolatedAlpha || mAlpha[mAlpha.size() - 1] < interpolatedAlpha) throw std::runtime_error("Alpha is outside of range!");
+		if (mAlpha[0] > interpolatedAlpha || mAlpha[mAlpha.size() - 1] < interpolatedAlpha) {
+			std::stringstream ss;
+			ss << "Alpha: " << interpolatedAlpha << " is outside of range!";
+			throw std::runtime_error(ss.str());
+		} 
 		if (isnan(interpolatedAlpha)) throw std::runtime_error("Alpha is NaN!");
 
 		// Find closest index below interpolated value
@@ -108,11 +113,11 @@
 	getIdealAngleOfAttack()
 	{
 		size_t alphaMaxIdx = 0;
-		double maxClOverCd = std::numeric_limits<double>::min();
+		double minCdOverCl = std::numeric_limits<double>::max();
 		for (size_t i = 0; i < mAlpha.size(); ++i) {
-			double currentClOverCd = mLiftCoefficients[i] / mDragCoefficients[i];
-			if (maxClOverCd < currentClOverCd) {
-				maxClOverCd = currentClOverCd;
+			double currentCdOverCl =  mDragCoefficients[i] / mLiftCoefficients[i];
+			if (minCdOverCl > currentCdOverCl) {
+				minCdOverCl = currentCdOverCl;
 				alphaMaxIdx = i;
 			}
 		}

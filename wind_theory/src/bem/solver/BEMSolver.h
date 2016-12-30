@@ -58,10 +58,11 @@
  		/**
  		 * Generate the power curve against tip speed ratio for a given twist.
  		 */
- 		// std::vector<std::vector<double> >
- 		// calculatePowerCurve(
- 		// 	double pitchTwist
- 		// 	);
+ 		std::vector<double>
+ 		calculatePowerCurve(
+ 			std::vector<double> windSpeeds,
+ 			double pitchTwist
+ 			);
 
  		/**
  		 * Return the rated condition as a pair: first is the TSR and second is the 
@@ -118,7 +119,8 @@
 		double
 		findPowerCoefficient(
 			double activePitch,
-			double windSpeed
+			double windSpeed,
+			bool isRatedCondition=false
 			);
 
  		bool mInitialised;

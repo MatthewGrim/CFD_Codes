@@ -55,43 +55,52 @@ class FluxCalculator1D(FluxCalculatorND):
         return density_fluxes, momentum_fluxes, total_energy_fluxes
 
     @staticmethod
-    def calculate_muscl_fluxes(densities, pressures, velocities, gamma, dx):
+    def calculate_muscl_fluxes(densities, pressures, velocities, gamma, dt_over_dx):
         """
         Function used to calculate fluxes for a 1D simulation using a MUSCL Scheme - Toro, Chapter 13/14
         """
-        density_fluxes = np.zeros(len(densities) - 3)
-        momentum_fluxes = np.zeros(len(densities) - 3)
-        total_energy_fluxes = np.zeros(len(densities) - 3)
+        half_step_densities = np.zeros(len(densities) - 2)
+        half_step_velocities = np.zeros(len(densities) - 2)
+        half_step_pressures = np.zeros(len(densities) - 2)
 
-        solver = IterativeRiemannSolver(gamma)
-
-        for i, dens_flux in enumerate(density_fluxes):
+        for i, dens_flux in enumerate(half_step_densities):
             idx = i + 1
 
             # Interpolate left and right densities
-            left_density = densities[idx] + (densities[idx + 1] - densities[idx - 1]) * dx / 4
-            left_pressure = pressures[idx] + (pressures[idx + 1] - pressures[idx - 1]) * dx / 4
-            left_velocity = velocities[idx] + (velocities[idx + 1] - pressures[idx - 1]) * dx / 4
+            left_density = densities[idx] - (densities[idx] - densities[idx - 1]) / 2
+            left_pressure = pressures[idx] - (pressures[idx] - pressures[idx - 1]) / 2
+            left_velocity = velocities[idx] - (velocities[idx] - pressures[idx - 1]) / 2
 
-            right_density = densities[idx + 1] - (densities[idx + 2] - densities[idx]) * dx / 4
-            right_pressure = pressures[idx + 1] - (pressures[idx + 2] - pressures[idx]) * dx / 4
-            right_velocity = velocities[idx + 1] - (velocities[idx + 2] - velocities[idx]) * dx / 4
+            right_density = densities[idx + 1] + (densities[idx + 1] - densities[idx]) / 2
+            right_pressure = pressures[idx + 1] + (pressures[idx + 1] - pressures[idx]) / 2
+            right_velocity = velocities[idx + 1] + (velocities[idx + 1] - velocities[idx]) / 2
 
-            # Generate left and right states from cell averaged values
-            left_state = ThermodynamicState1D(left_pressure, left_density, left_velocity, gamma)
-            right_state = ThermodynamicState1D(right_pressure, right_density, right_velocity, gamma)
+            # Perform half step flux
+            left_density_flux = left_density * left_velocity
+            left_momentum_flux = left_density * left_velocity * left_velocity + left_pressure
+            left_e_tot = left_pressure / (gamma - 1) + 0.5 * left_density * left_velocity * left_velocity
+            left_energy_flux = (left_e_tot + left_pressure) * left_velocity
 
-            # Solve and sample Riemann problem
-            p_star, u_star = solver.get_star_states(left_state, right_state)
-            p_flux, u_flux, rho_flux, _ = solver.sample(0.0, left_state, right_state, p_star, u_star)
+            right_density_flux = right_density * right_velocity
+            right_momentum_flux = right_density * right_velocity * right_velocity + right_pressure
+            right_e_tot = right_pressure / (gamma - 1) + 0.5 * right_density * right_velocity * right_velocity
+            right_energy_flux = (right_e_tot + right_pressure) * right_velocity
 
-            # Store fluxes in array
-            density_fluxes[i] = rho_flux * u_flux
-            momentum_fluxes[i] = rho_flux * u_flux * u_flux + p_flux
-            e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
-            total_energy_fluxes[i] = (p_flux + e_tot) * u_flux
+            half_step_density_flux = (left_density_flux - right_density_flux) * dt_over_dx * 0.5
+            half_step_momentum_flux = (left_momentum_flux - right_momentum_flux) * dt_over_dx * 0.5
+            half_step_energy_flux = (left_energy_flux - right_energy_flux) * dt_over_dx * 0.5
+            state = ThermodynamicState1D(pressures[idx], densities[idx], velocities[idx], gamma)
+            state.update_states(half_step_density_flux,
+                                half_step_momentum_flux,
+                                half_step_energy_flux)
 
-        return density_fluxes, momentum_fluxes, total_energy_fluxes
+            half_step_densities[i] = state.rho
+            half_step_velocities[i] = state.u
+            half_step_pressures[i] = state.p
+
+        # Use godunov solver on half step states to get final flux
+        return FluxCalculator1D.calculate_godunov_fluxes(half_step_densities, half_step_pressures, half_step_velocities, gamma)
+
 
     @staticmethod
     def calculate_hllc_fluxes(densities, pressures, velocities, gamma):

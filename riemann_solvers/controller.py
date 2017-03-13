@@ -138,13 +138,14 @@ class Controller1D(ControllerND):
                                                                               self.velocities,
                                                                               self.gamma)
         elif self.flux_calculator == FluxCalculator1D.MUSCL:
+            dt_over_dx = dt / self.dx
             self.density_fluxes, \
             self.momentum_fluxes, \
             self.total_energy_fluxes = FluxCalculator1D.calculate_muscl_fluxes(self.densities,
                                                                                self.pressures,
                                                                                self.velocities,
                                                                                self.gamma,
-                                                                               self.dx)
+                                                                               dt_over_dx)
         else:
             raise RuntimeError("Flux calculator does not exist")
 

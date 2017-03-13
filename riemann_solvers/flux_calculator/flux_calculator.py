@@ -55,28 +55,27 @@ class FluxCalculator1D(FluxCalculatorND):
         return density_fluxes, momentum_fluxes, total_energy_fluxes
 
     @staticmethod
-    def calculate_muscl_fluxes(densities, pressures, velocities, gamma):
+    def calculate_muscl_fluxes(densities, pressures, velocities, gamma, dx):
         """
         Function used to calculate fluxes for a 1D simulation using a MUSCL Scheme - Toro, Chapter 13/14
         """
-        density_fluxes = np.zeros(len(densities) - 1)
-        momentum_fluxes = np.zeros(len(densities) - 1)
-        total_energy_fluxes = np.zeros(len(densities) - 1)
+        density_fluxes = np.zeros(len(densities) - 3)
+        momentum_fluxes = np.zeros(len(densities) - 3)
+        total_energy_fluxes = np.zeros(len(densities) - 3)
 
         solver = IterativeRiemannSolver(gamma)
 
         for i, dens_flux in enumerate(density_fluxes):
-            if i == 0 or i == len(density_fluxes - 1):
-                pass
+            idx = i + 1
 
             # Interpolate left and right densities
-            left_density = densities[i] + (densities[i + 1] - densities[i - 1]) / 4
-            left_pressure = pressures[i] + (pressures[i + 1] - pressures[i - 1]) / 4
-            left_velocity = velocities[i] + (velocities[i + 1] - pressures[i - 1]) / 4
+            left_density = densities[idx] + (densities[idx + 1] - densities[idx - 1]) * dx / 4
+            left_pressure = pressures[idx] + (pressures[idx + 1] - pressures[idx - 1]) * dx / 4
+            left_velocity = velocities[idx] + (velocities[idx + 1] - pressures[idx - 1]) * dx / 4
 
-            right_density = densities[i + 1] - (densities[i + 2] - densities[i]) / 4
-            right_pressure = pressures[i + 1] - (pressures[i + 2] - pressures[i]) / 4
-            right_velocity = velocities[i + 1] - (velocities[i + 2] - velocities[i]) / 4
+            right_density = densities[idx + 1] - (densities[idx + 2] - densities[idx]) * dx / 4
+            right_pressure = pressures[idx + 1] - (pressures[idx + 2] - pressures[idx]) * dx / 4
+            right_velocity = velocities[idx + 1] - (velocities[idx + 2] - velocities[idx]) * dx / 4
 
             # Generate left and right states from cell averaged values
             left_state = ThermodynamicState1D(left_pressure, left_density, left_velocity, gamma)

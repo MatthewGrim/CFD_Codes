@@ -83,8 +83,8 @@ def example():
     run_god = True
     run_rc = False
     run_hllc = False
-    run_muscl = False   # CURRENTLY BROKEN - needs flux limiters
-    for i in range(0, 5):
+    run_muscl = True   # CURRENTLY BROKEN - needs flux limiters
+    for i in range(0, 1):
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 

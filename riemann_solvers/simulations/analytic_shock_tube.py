@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
-from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import RiemannSolver
+from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import IterativeRiemannSolver
 
 
 class AnalyticShockTube(object):
@@ -21,7 +21,7 @@ class AnalyticShockTube(object):
 
         self.left_state = left_state
         self.right_state = right_state
-        self.solver = RiemannSolver(left_state.gamma)
+        self.solver = IterativeRiemannSolver(left_state.gamma)
         self.membrane_location = membrane_location
         self.x = np.linspace(0, 1, num_pts)
         self.rho = np.zeros(num_pts)
@@ -66,7 +66,6 @@ def test_sod_problems():
     u_right = [0.0, 2.0, 0.0, 0.0, -6.19633, 0.0]
     t = [0.25, 0.15, 0.012, 0.035, 0.035, 0.2]
     x = [0.5, 0.5, 0.5, 0.5, 0.5, 0.3]
-
     for i in range(0, 6):
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)

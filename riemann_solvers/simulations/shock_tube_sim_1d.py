@@ -80,26 +80,45 @@ def example():
     membrane_location = [0.3, 0.5, 0.5, 0.4, 0.8]
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
+    run_god = True
+    run_rc = False
+    run_hllc = False
+    run_muscl = False   # CURRENTLY BROKEN - needs flux limiters
     for i in range(0, 5):
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 
-        shock_tube_god = ShockTube1D(left_state, right_state, membrane_location[i],
-                                     final_time=end_times[i], CFL=0.45,
-                                     flux_calculator=FluxCalculator1D.GODUNOV)
-        shock_tube_rc = ShockTube1D(left_state, right_state, membrane_location[i],
-                                    final_time=end_times[i], CFL=0.45,
-                                    flux_calculator=FluxCalculator1D.RANDOM_CHOICE)
+        if run_god:
+            shock_tube_god = ShockTube1D(left_state, right_state, membrane_location[i],
+                                         final_time=end_times[i], CFL=0.45,
+                                         flux_calculator=FluxCalculator1D.GODUNOV)
+            godunov_sim = Controller1D(shock_tube_god)
+            (times_god, x_god, densities_god, pressures_god, velocities_god, internal_energies_god) = godunov_sim.run_sim()
 
-        # Get Godunov and Random Choice solutions
-        godunov_sim = Controller1D(shock_tube_god)
-        random_choice_sim = Controller1D(shock_tube_rc)
-        (times_god, x_god, densities_god, pressures_god, velocities_god, internal_energies_god) = godunov_sim.run_sim()
-        (times_rc, x_rc, densities_rc, pressures_rc, velocities_rc, internal_energies_rc) = random_choice_sim.run_sim()
+        if run_rc:
+            shock_tube_rc = ShockTube1D(left_state, right_state, membrane_location[i],
+                                        final_time=end_times[i], CFL=0.45,
+                                        flux_calculator=FluxCalculator1D.RANDOM_CHOICE)
+            random_choice_sim = Controller1D(shock_tube_rc)
+            (times_rc, x_rc, densities_rc, pressures_rc, velocities_rc, internal_energies_rc) = random_choice_sim.run_sim()
+
+        if run_hllc:
+            shock_tube_hllc = ShockTube1D(left_state, right_state, membrane_location[i],
+                                          final_time=end_times[i], CFL=0.45,
+                                          flux_calculator=FluxCalculator1D.HLLC)
+            hllc_sim = Controller1D(shock_tube_hllc)
+            (times_hllc, x_hllc, densities_hllc, pressures_hllc, velocities_hllc, internal_energies_hllc) = hllc_sim.run_sim()
+
+        if run_muscl:
+            shock_tube_muscl = ShockTube1D(left_state, right_state, membrane_location[i],
+                                          final_time=end_times[i], CFL=0.45,
+                                          flux_calculator=FluxCalculator1D.MUSCL)
+            muscl_sim = Controller1D(shock_tube_muscl)
+            (times_muscl, x_muscl, densities_muscl, pressures_muscl, velocities_muscl, internal_energies_muscl) = muscl_sim.run_sim()
 
         # Get analytic solution
         sod_test = AnalyticShockTube(left_state, right_state, membrane_location[i], 1000)
-        x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(times_god[-1], membrane_location[i])
+        x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(end_times[i], membrane_location[i])
 
         # Plot results
         title = "Sod Test: {}".format(i + 1)
@@ -110,26 +129,50 @@ def example():
         plt.subplot(num_plts_x, num_plts_y, 1)
         plt.title("Density")
         plt.plot(x_sol, rho_sol)
-        plt.scatter(x_god, densities_god, c='g')
-        plt.scatter(x_rc, densities_rc, c='r')
+        if run_god:
+            plt.scatter(x_god, densities_god, c='g')
+        if run_rc:
+            plt.scatter(x_rc, densities_rc, c='r')
+        if run_hllc:
+            plt.scatter(x_hllc, densities_hllc, c='k')
+        if run_muscl:
+            plt.scatter(x_muscl, densities_muscl, c='c')
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 2)
         plt.title("Velocity")
         plt.plot(x_sol, u_sol)
-        plt.scatter(x_god, velocities_god, c='g')
-        plt.scatter(x_rc, velocities_rc, c='r')
+        if run_god:
+            plt.scatter(x_god, velocities_god, c='g')
+        if run_rc:
+            plt.scatter(x_rc, velocities_rc, c='r')
+        if run_hllc:
+            plt.scatter(x_hllc, velocities_hllc, c='k')
+        if run_muscl:
+            plt.scatter(x_muscl, velocities_muscl, c='c')
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 3)
         plt.title("Pressure")
         plt.plot(x_sol, p_sol)
-        plt.scatter(x_god, pressures_god, c='g')
-        plt.scatter(x_rc, pressures_rc, c='r')
+        if run_god:
+            plt.scatter(x_god, pressures_god, c='g')
+        if run_rc:
+            plt.scatter(x_rc, pressures_rc, c='r')
+        if run_hllc:
+            plt.scatter(x_hllc, pressures_hllc, c='k')
+        if run_muscl:
+            plt.scatter(x_muscl, pressures_muscl, c='c')
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 4)
         plt.title("Internal Energy")
         plt.plot(x_sol, e_sol)
-        plt.scatter(x_god, internal_energies_god, c='g')
-        plt.scatter(x_rc, internal_energies_rc, c='r')
+        if run_god:
+            plt.scatter(x_god, internal_energies_god, c='g')
+        if run_rc:
+            plt.scatter(x_rc, internal_energies_rc, c='r')
+        if run_hllc:
+            plt.scatter(x_hllc, internal_energies_hllc, c='k')
+        if run_muscl:
+            plt.scatter(x_muscl, internal_energies_muscl, c='c')
         plt.xlim([0.0, 1.0])
         plt.show()
 

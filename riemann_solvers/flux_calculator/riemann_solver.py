@@ -2,8 +2,8 @@
 Author: Rohan
 Date: 29/06/16
 
-This file contains a class used to model a numerical solution to Riemann problems. The implementation of the Riemann
-follows that in Toro - Chapter 4.
+This file contains a class hierarchy used to model a numerical solution to Riemann problems. The implementation of
+the Riemann solvers here follows those in Toro. There Riemann solvers assume an ideal gas equation of state.
 """
 
 import numpy as np
@@ -11,11 +11,54 @@ import numpy as np
 from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
 
 
-class RiemannSolver(object):
+class BaseRiemannSolver(object):
     def __init__(self, gamma):
         assert isinstance(gamma, float)
         self.gamma = gamma
-    
+
+    def _estimate_p_star(self, left, right):
+        """
+        :return: an estimate for p_star used in the iterative scheme
+        """
+        gamma = self.gamma
+        G1 = (gamma - 1.0) / (2.0 * gamma)
+        G3 = (2.0 * gamma) / (gamma - 1.0)
+        G4 = 2.0 / (gamma - 1.0)
+        G5 = 2.0 / (gamma + 1.0)
+        G6 = (gamma - 1.0) / (gamma + 1.0)
+        G7 = (gamma - 1.0) / 2.0
+        CUP = 0.25 * (left.rho + right.rho) * (left.sound_speed() + right.sound_speed())
+        PPV = 0.5 * (left.p + right.p) + 0.5 * (left.u - right.u) * CUP
+        PPV = max(1e-6, PPV)
+        PMIN = min(left.p, right.p)
+        PMAX = max(left.p, right.p)
+        QMAX = PMAX / PMIN
+
+        if QMAX <= 2.0 and PMIN <= PPV <= PMAX:
+            PM = PPV
+        else:
+            if (PPV < PMIN):
+                PQ = (left.p / right.p) ** G1
+                UM = (PQ * left.u / left.sound_speed() + right.u / right.sound_speed() + G4 * (PQ - 1.0)) \
+                     / (PQ / left.sound_speed() + 1.0 / right.sound_speed())
+                PTL = 1.0 + G7 * (left.u - UM) / left.sound_speed()
+                PTR = 1.0 + G7 * (UM - right.u) / right.sound_speed()
+                PM = 0.5 * (left.p * PTL ** G3 + right.p * PTR ** G3)
+            else:
+                GEL = np.sqrt((G5 / left.rho) / (G6 * left.p + PPV))
+                GER = np.sqrt((G5 / right.rho) / (G6 * right.p + PPV))
+                PM = (GEL * left.p + GER * right.p - (right.u - left.u)) / (GEL + GER)
+                PM = max(1e-6, PM)
+        return PM
+
+
+class IterativeRiemannSolver(BaseRiemannSolver):
+    """
+    Exact Riemann solver based on a Newton Raphson iterative scheme, outlined in Toro - Chapter 4
+    """
+    def __init__(self, gamma):
+        super(IterativeRiemannSolver, self).__init__(gamma)
+
     def __get_A(self, rho):
         """
         rho: density in the system outside of the star region on either the right or left.
@@ -83,48 +126,13 @@ class RiemannSolver(object):
 
         return f_deriv_r + f_deriv_l
 
-    def __estimate_p_star(self, left, right):
-        """
-        :return: an estimate for p_star used in the iterative scheme
-        """
-        gamma = self.gamma
-        G1 = (gamma - 1.0) / (2.0 * gamma)
-        G3 = (2.0 * gamma) / (gamma - 1.0)
-        G4 = 2.0 / (gamma - 1.0)
-        G5 = 2.0 / (gamma + 1.0)
-        G6 = (gamma - 1.0) / (gamma + 1.0)
-        G7 = (gamma - 1.0) / 2.0
-        CUP = 0.25 * (left.rho + right.rho) * (left.sound_speed() + right.sound_speed())
-        PPV = 0.5 * (left.p + right.p) + 0.5 * (left.u - right.u) * CUP
-        PPV = max(1e-6, PPV)
-        PMIN = min(left.p, right.p)
-        PMAX = max(left.p, right.p)
-        QMAX = PMAX / PMIN
-
-        if QMAX <= 2.0 and PMIN <= PPV <= PMAX:
-            PM = PPV
-        else:
-            if (PPV < PMIN):
-                PQ = (left.p / right.p) ** G1
-                UM = (PQ * left.u / left.sound_speed() + right.u / right.sound_speed() + G4 * (PQ - 1.0)) \
-                     / (PQ / left.sound_speed() + 1.0 / right.sound_speed())
-                PTL = 1.0 + G7 * (left.u - UM) / left.sound_speed()
-                PTR = 1.0 + G7 * (UM - right.u) / right.sound_speed()
-                PM = 0.5 * (left.p * PTL ** G3 + right.p * PTR ** G3)
-            else:
-                GEL = np.sqrt((G5 / left.rho) / (G6 * left.p + PPV))
-                GER = np.sqrt((G5 / right.rho) / (G6 * right.p + PPV))
-                PM = (GEL * left.p + GER * right.p - (right.u - left.u)) / (GEL + GER)
-                PM = max(1e-6, PM)
-        return PM
-
     def __get_p_star(self, left_state, right_state):
         """
         :return: the pressure in the star region.
         """
         TOL = 1e-6
 
-        p_sol = self.__estimate_p_star(left_state, right_state)
+        p_sol = self._estimate_p_star(left_state, right_state)
         delta = 1.0
         i = 0
         while delta > TOL:
@@ -157,7 +165,7 @@ class RiemannSolver(object):
         assert isinstance(right_state, ThermodynamicState1D)
 
         # Check for vacuum generation
-        if RiemannSolver.is_vacuum_generated(left_state, right_state):
+        if IterativeRiemannSolver.is_vacuum_generated(left_state, right_state):
             self.sample_vacuum(0.0, left_state, right_state)
 
         p_star = self.__get_p_star(left_state, right_state)
@@ -215,7 +223,7 @@ class RiemannSolver(object):
         Last returned value is a boolean determining whether the state returned is on the left side of the contact
         """
         # Check if state is a vacuum
-        if RiemannSolver.is_vacuum_generated(left_state, right_state):
+        if IterativeRiemannSolver.is_vacuum_generated(left_state, right_state):
             return self.sample_vacuum(x_over_t, left_state, right_state)
         else:
             # Find state along wave line
@@ -277,6 +285,79 @@ class RiemannSolver(object):
                         return p_star, u_star, rho_star, True
 
 
+class HLLCRiemannSolver(BaseRiemannSolver):
+    """
+    Approximate Riemann solver that estimates the fluxes based on the assumption of uniform star states, outlined
+    in Toro - Chapter 10
+
+    This riemann solver is currently only implemented in 1D
+    """
+    def __init__(self, gamma):
+        super(HLLCRiemannSolver, self).__init__(gamma)
+
+    def __evaluate_wave_speeds(self, left, right, p_estimate):
+        """
+        Evaluate wave speeds based on pressure estimate
+        """
+        gamma_coeff = (self.gamma + 1) / (2 * self.gamma)
+
+        q_L = 1 if p_estimate <= left.p else (1 + gamma_coeff * (p_estimate / left.p - 1)) ** 0.5
+        q_R = 1 if p_estimate <= right.p else (1 + gamma_coeff * (p_estimate / right.p - 1)) ** 0.5
+
+        S_L = left.u - left.sound_speed() * q_L
+        S_R = right.u + right.sound_speed() * q_R
+
+        S_Star = right.p - left.p + left.rho * left.u * (S_L - left.u) - right.rho * right.u * (S_R - right.u)
+        S_Star /= left.rho * (S_L - left.u) - right.rho * (S_R - right.u)
+
+        return S_L, S_R, S_Star
+
+    def __HLLC_flux(self, left, right, S_L, S_Star, S_R):
+        """
+        Get the HLLC flux by using the constant star state assumption and integrating across the left and right regions
+        """
+        if 0 <= S_Star:
+            rho_flux = left.u * left.rho
+            mom_flux = rho_flux * left.u + left.p
+            energy_flux = (left.p / (left.gamma - 1) + 0.5 * rho_flux * left.u + left.p) * left.u
+            if 0 < S_L:
+                return rho_flux, mom_flux, energy_flux
+            else:
+                flux_coeff_1 = S_Star / (S_L - S_Star)
+                flux_coeff_2 = S_L / (S_L - S_Star) * (left.p + left.rho * (S_L - left.u) * (S_Star - left.u))
+
+                rho_flux = flux_coeff_1 * (S_L * left.rho - rho_flux)
+                mom_flux = flux_coeff_1 * (S_L * left.u * left.rho - mom_flux) + flux_coeff_2
+                energy_flux = flux_coeff_1 * (S_L * (left.e_int * left.rho + left.e_kin) - energy_flux) + flux_coeff_2 * S_Star
+
+                return rho_flux, mom_flux, energy_flux
+        else:
+            rho_flux = right.u * right.rho
+            mom_flux = rho_flux * right.u + right.p
+            energy_flux = (right.p / (right.gamma - 1) + 0.5 * rho_flux * right.u + right.p) * right.u
+            if S_R <= 0:
+                return rho_flux, mom_flux, energy_flux
+            else:
+                flux_coeff_1 = S_Star / (S_R - S_Star)
+                flux_coeff_2 = S_R / (S_R - S_Star) * (right.p + right.rho * (S_R - right.u) * (S_Star - right.u))
+
+                rho_flux = flux_coeff_1 * (S_R * right.rho - rho_flux)
+                mom_flux = flux_coeff_1 * (S_R * right.u * right.rho - mom_flux) + flux_coeff_2
+                energy_flux = flux_coeff_1 * (S_R * (right.e_int * right.rho + right.e_kin) - energy_flux) + flux_coeff_2 * S_Star
+
+                return rho_flux, mom_flux, energy_flux
+
+    def evaluate_flux(self, left, right):
+        """
+        Public function for exavluation of flux between left and right states
+        """
+        p_estimate = self._estimate_p_star(left, right)
+
+        S_L, S_R, S_Star = self.__evaluate_wave_speeds(left, right, p_estimate)
+
+        return self.__HLLC_flux(left, right, S_L, S_Star, S_R)
+
+
 def test_iterative_scheme():
     """
     This function runs through the five shock tube problems outlined in Toro - Chapter 4. The results for contact
@@ -290,7 +371,7 @@ def test_iterative_scheme():
     rho_right = [0.125, 1.0, 1.0, 1.0, 5.99242]
     u_right = [0.0, 2.0, 0.0, 0.0, -6.19633]
 
-    solver = RiemannSolver(1.4)
+    solver = IterativeRiemannSolver(1.4)
     print '*' * 50
     for i in range(0, 5):
         print "Riemann Test: " + str(i + 1)

@@ -78,19 +78,34 @@ class Controller1D(ControllerND):
         start_state = ThermodynamicState1D(self.pressures[0], self.densities[0], self.velocities[0], self.gamma)
         end_state = ThermodynamicState1D(self.pressures[i_length], self.densities[i_length], self.velocities[i_length], self.gamma)
 
-        # Low end
-        start_state = self.boundary_functions[BoundaryConditionND.X_LOW](start_state)
-        self.densities = np.append([start_state.rho], self.densities, 0)
-        self.pressures = np.append([start_state.p], self.pressures, 0)
-        self.velocities = np.append([start_state.u], self.velocities, 0)
-        self.internal_energies = np.append([start_state.e_int], self.internal_energies, 0)
+        if self.flux_calculator != FluxCalculator1D.MUSCL:
+            # Low end
+            start_state = self.boundary_functions[BoundaryConditionND.X_LOW](start_state)
+            self.densities = np.append([start_state.rho], self.densities, 0)
+            self.pressures = np.append([start_state.p], self.pressures, 0)
+            self.velocities = np.append([start_state.u], self.velocities, 0)
+            self.internal_energies = np.append([start_state.e_int], self.internal_energies, 0)
 
-        # High end
-        end_state = self.boundary_functions[BoundaryConditionND.X_HIGH](end_state)
-        self.densities = np.append(self.densities, [end_state.rho], 0)
-        self.pressures = np.append(self.pressures, [end_state.p], 0)
-        self.velocities = np.append(self.velocities, [end_state.u], 0)
-        self.internal_energies = np.append(self.internal_energies, [end_state.e_int], 0)
+            # High end
+            end_state = self.boundary_functions[BoundaryConditionND.X_HIGH](end_state)
+            self.densities = np.append(self.densities, [end_state.rho], 0)
+            self.pressures = np.append(self.pressures, [end_state.p], 0)
+            self.velocities = np.append(self.velocities, [end_state.u], 0)
+            self.internal_energies = np.append(self.internal_energies, [end_state.e_int], 0)
+        else:
+            # Low end
+            start_state = self.boundary_functions[BoundaryConditionND.X_LOW](start_state)
+            self.densities = np.append([start_state.rho, start_state.rho], self.densities, 0)
+            self.pressures = np.append([start_state.p, start_state.p], self.pressures, 0)
+            self.velocities = np.append([start_state.u, start_state.u], self.velocities, 0)
+            self.internal_energies = np.append([start_state.e_int, start_state.e_int], self.internal_energies, 0)
+
+            # High end
+            end_state = self.boundary_functions[BoundaryConditionND.X_HIGH](end_state)
+            self.densities = np.append(self.densities, [end_state.rho, end_state.rho], 0)
+            self.pressures = np.append(self.pressures, [end_state.p, end_state.p], 0)
+            self.velocities = np.append(self.velocities, [end_state.u, end_state.u], 0)
+            self.internal_energies = np.append(self.internal_energies, [end_state.e_int, end_state.e_int], 0)
 
     def _calculate_fluxes(self, dt, ts):
         """
@@ -115,14 +130,34 @@ class Controller1D(ControllerND):
                                                                                        self.gamma,
                                                                                        ts,
                                                                                        dx_over_dt)
+        elif self.flux_calculator == FluxCalculator1D.HLLC:
+            self.density_fluxes, \
+            self.momentum_fluxes, \
+            self.total_energy_fluxes = FluxCalculator1D.calculate_hllc_fluxes(self.densities,
+                                                                              self.pressures,
+                                                                              self.velocities,
+                                                                              self.gamma)
+        elif self.flux_calculator == FluxCalculator1D.MUSCL:
+            self.density_fluxes, \
+            self.momentum_fluxes, \
+            self.total_energy_fluxes = FluxCalculator1D.calculate_godunov_fluxes(self.densities,
+                                                                                 self.pressures,
+                                                                                 self.velocities,
+                                                                                 self.gamma)
         else:
             raise RuntimeError("Flux calculator does not exist")
 
         grid_length = len(self.densities)
-        self.densities = self.densities[1 : grid_length - 1]
-        self.pressures = self.pressures[1 : grid_length - 1]
-        self.velocities = self.velocities[1 : grid_length - 1]
-        self.internal_energies = self.internal_energies[1 : grid_length - 1]
+        if self.flux_calculator != FluxCalculator1D.MUSCL:
+            self.densities = self.densities[1 : grid_length - 1]
+            self.pressures = self.pressures[1 : grid_length - 1]
+            self.velocities = self.velocities[1 : grid_length - 1]
+            self.internal_energies = self.internal_energies[1 : grid_length - 1]
+        else:
+            self.densities = self.densities[2 : grid_length - 2]
+            self.pressures = self.pressures[2 : grid_length - 2]
+            self.velocities = self.velocities[2 : grid_length - 2]
+            self.internal_energies = self.internal_energies[2 : grid_length - 2]
 
     def _calculate_time_step(self):
         """
@@ -182,7 +217,7 @@ class Controller1D(ControllerND):
             t += dt
             ts += 1
             times.append(t)
-            print str(ts) + ": " + str(t)
+            print("Step " + str(ts) + ": " + str(dt))
 
         return times, self.x, self.densities, self.pressures, self.velocities, self.internal_energies
 
@@ -379,7 +414,7 @@ class Controller2D(ControllerND):
             dt = self._evolve_time_step(ts)
             t += dt
             times.append(t)
-            print "Step " + str(ts) + ": " + str(t)
+            print("Step " + str(ts) + ": " + str(t))
             ts += 1
 
         return times, self.x, self.y, self.densities, self.pressures, self.vel_x, self.vel_y, self.internal_energies

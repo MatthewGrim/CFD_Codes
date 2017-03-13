@@ -7,14 +7,14 @@ This file contains tests for an exact riemann solver
 
 import unittest
 
-from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import RiemannSolver
+from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import IterativeRiemannSolver
 from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
 
 
 class RiemannSolverTest(unittest.TestCase):
     def sod_test(self, gamma, left, right, exact_p_star, exact_u_star):
         assert left.gamma == right.gamma
-        solver = RiemannSolver(gamma)
+        solver = IterativeRiemannSolver(gamma)
 
         p_star, u_star = solver.get_star_states(left, right)
 

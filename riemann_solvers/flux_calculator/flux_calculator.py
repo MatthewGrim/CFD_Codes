@@ -6,7 +6,8 @@ This file contains a a class providing methods to calculate the fluxes using Rie
 """
 
 from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
-from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import RiemannSolver
+from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import IterativeRiemannSolver
+from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import HLLCRiemannSolver
 from CFD_Projects.riemann_solvers.flux_calculator.van_der_corput import VanDerCorput
 
 import numpy as np
@@ -15,6 +16,8 @@ import numpy as np
 class FluxCalculatorND(object):
     GODUNOV = 1
     RANDOM_CHOICE = 2
+    HLLC = 3
+    MUSCL = 4
 
 
 class FluxCalculator1D(FluxCalculatorND):
@@ -30,7 +33,7 @@ class FluxCalculator1D(FluxCalculatorND):
         momentum_fluxes = np.zeros(len(densities) - 1)
         total_energy_fluxes = np.zeros(len(densities) - 1)
 
-        solver = RiemannSolver(gamma)
+        solver = IterativeRiemannSolver(gamma)
 
         for i, dens_flux in enumerate(density_fluxes):
             # Generate left and right states from cell averaged values
@@ -52,6 +55,66 @@ class FluxCalculator1D(FluxCalculatorND):
         return density_fluxes, momentum_fluxes, total_energy_fluxes
 
     @staticmethod
+    def calculate_muscl_fluxes(densities, pressures, velocities, gamma):
+        """
+        Function used to calculate fluxes for a 1D simulation using a MUSCL Scheme - Toro, Chapter 13/14
+        """
+        density_fluxes = np.zeros(len(densities) - 1)
+        momentum_fluxes = np.zeros(len(densities) - 1)
+        total_energy_fluxes = np.zeros(len(densities) - 1)
+
+        solver = IterativeRiemannSolver(gamma)
+
+        for i, dens_flux in enumerate(density_fluxes):
+            if i == 0 or i == len(density_fluxes - 1):
+                pass
+
+            # Interpolate left and right densities
+            left_density = densities[i] + (densities[i + 1] - densities[i - 1]) / 4
+            left_pressure = pressures[i] + (pressures[i + 1] - pressures[i - 1]) / 4
+            left_velocity = velocities[i] + (velocities[i + 1] - pressures[i - 1]) / 4
+
+            right_density = densities[i + 1] - (densities[i + 2] - densities[i]) / 4
+            right_pressure = pressures[i + 1] - (pressures[i + 2] - pressures[i]) / 4
+            right_velocity = velocities[i + 1] - (velocities[i + 2] - velocities[i]) / 4
+
+            # Generate left and right states from cell averaged values
+            left_state = ThermodynamicState1D(left_pressure, left_density, left_velocity, gamma)
+            right_state = ThermodynamicState1D(right_pressure, right_density, right_velocity, gamma)
+
+            # Solve and sample Riemann problem
+            p_star, u_star = solver.get_star_states(left_state, right_state)
+            p_flux, u_flux, rho_flux, _ = solver.sample(0.0, left_state, right_state, p_star, u_star)
+
+            # Store fluxes in array
+            density_fluxes[i] = rho_flux * u_flux
+            momentum_fluxes[i] = rho_flux * u_flux * u_flux + p_flux
+            e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
+            total_energy_fluxes[i] = (p_flux + e_tot) * u_flux
+
+        return density_fluxes, momentum_fluxes, total_energy_fluxes
+
+    @staticmethod
+    def calculate_hllc_fluxes(densities, pressures, velocities, gamma):
+        """
+        Calculated the fluxes bases on the HLLC approximate Riemann solver
+        """
+        density_fluxes = np.zeros(len(densities) - 1)
+        momentum_fluxes = np.zeros(len(densities) - 1)
+        total_energy_fluxes = np.zeros(len(densities) - 1)
+
+        solver = HLLCRiemannSolver(gamma)
+        for i, dens_flux in enumerate(density_fluxes):
+            # Generate left and right states from cell averaged values
+            left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma)
+            right_state = ThermodynamicState1D(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma)
+
+            density_fluxes[i], momentum_fluxes[i], total_energy_fluxes[i] = solver.evaluate_flux(left_state, right_state)
+
+        return density_fluxes, momentum_fluxes, total_energy_fluxes
+
+
+    @staticmethod
     def calculate_random_choice_fluxes(densities, pressures, velocities, gamma, ts, dx_over_dt):
         """
         Function used to calculate states for a 1D simulation using Glimm's random choice scheme as in Toro Chapter 7
@@ -60,7 +123,7 @@ class FluxCalculator1D(FluxCalculatorND):
         momentum_fluxes = np.zeros(len(densities) - 1)
         total_energy_fluxes = np.zeros(len(densities) - 1)
 
-        solver = RiemannSolver(gamma)
+        solver = IterativeRiemannSolver(gamma)
         theta = VanDerCorput.calculate_theta(ts, 2, 1)
         for i in range(len(densities) - 2):
             # Generate left and right states from cell averaged values
@@ -102,7 +165,7 @@ class FluxCalculator2D(FluxCalculatorND):
         momentum_flux_y = np.zeros(density_fluxes.shape)
         total_energy_fluxes = np.zeros(density_fluxes.shape)
 
-        solver = RiemannSolver(gamma)
+        solver = IterativeRiemannSolver(gamma)
 
         i_length, j_length = np.shape(densities)
         for i in range(i_length - 1):

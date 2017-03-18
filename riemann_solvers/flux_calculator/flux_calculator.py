@@ -9,6 +9,7 @@ from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicSt
 from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import IterativeRiemannSolver
 from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import HLLCRiemannSolver
 from CFD_Projects.riemann_solvers.flux_calculator.van_der_corput import VanDerCorput
+from CFD_Projects.riemann_solvers.flux_calculator.flux_limiter import *
 
 import numpy as np
 
@@ -59,31 +60,48 @@ class FluxCalculator1D(FluxCalculatorND):
         """
         Function used to calculate fluxes for a 1D simulation using a MUSCL Scheme - Toro, Chapter 13/14
         """
+        # Get half step densities
         half_step_densities_L = np.zeros(len(densities) - 2)
         half_step_velocities_L = np.zeros(len(densities) - 2)
         half_step_pressures_L = np.zeros(len(densities) - 2)
         half_step_densities_R = np.zeros(len(densities) - 2)
         half_step_velocities_R = np.zeros(len(densities) - 2)
         half_step_pressures_R = np.zeros(len(densities) - 2)
-
         for i, dens in enumerate(half_step_densities_L):
             idx = i + 1
 
-            # Interpolate left and right densities
-            left_density = densities[idx] - (densities[idx] - densities[idx - 1]) / 2
-            left_momentum = densities[idx] * velocities[idx] - (densities[idx] * velocities[idx] - densities[idx - 1] * velocities[idx - 1]) / 2
+            # Calculate slopes
+            left_density_slope = (densities[idx] - densities[idx - 1]) / 2
+            left_momentum_slope = (densities[idx] * velocities[idx] - densities[idx - 1] * velocities[idx - 1]) / 2
             cell_energy = 0.5 * densities[idx] * velocities[idx] * velocities[idx] + pressures[idx] / (gamma - 1)
             behind_energy = 0.5 * densities[idx - 1] * velocities[idx - 1] * velocities[idx - 1] + pressures[idx - 1] / (gamma - 1)
-            left_energy = cell_energy - (cell_energy - behind_energy) / 2
-            assert left_density > 0
-            assert left_energy > 0
+            left_energy_slope = (cell_energy - behind_energy) / 2
 
-            right_density = densities[idx] + (densities[idx + 1] - densities[idx]) / 2
-            right_momentum = densities[idx] * velocities[idx] + (densities[idx + 1] * velocities[idx + 1] - densities[idx] * velocities[idx]) / 2
+            right_density_slope = (densities[idx + 1] - densities[idx]) / 2
+            right_momentum_slope = (densities[idx + 1] * velocities[idx + 1] - densities[idx] * velocities[idx]) / 2
             forward_energy = 0.5 * densities[idx + 1] * velocities[idx + 1] * velocities[idx + 1] + pressures[idx + 1] / (gamma - 1)
-            right_energy = cell_energy + (forward_energy - cell_energy) / 2
-            assert right_density > 0
-            assert right_energy > 0
+            right_energy_slope = (forward_energy - cell_energy) / 2
+
+            a = np.sqrt(gamma * pressures[idx] / densities[idx])
+            c = dt_over_dx * a
+            average_density_slope, average_momentum_slope, average_energy_slope = \
+                UltraBeeLimiter.calculate_limited_slopes(left_density_slope, right_density_slope,
+                                                       left_momentum_slope, right_momentum_slope,
+                                                       left_energy_slope, right_energy_slope,
+                                                       c)
+
+            # Interpolate left and right densities
+            left_density = densities[idx] - average_density_slope
+            left_momentum = densities[idx] * velocities[idx] - average_momentum_slope
+            left_energy = cell_energy - average_energy_slope
+            assert left_density > 0, left_density
+            assert left_energy > 0, left_energy
+
+            right_density = densities[idx] + average_density_slope
+            right_momentum = densities[idx] * velocities[idx] + average_momentum_slope
+            right_energy = cell_energy + average_energy_slope
+            assert right_density > 0, right_density
+            assert right_energy > 0, right_energy
 
             # Perform half step flux
             left_velocity = left_momentum / left_density
@@ -128,6 +146,7 @@ class FluxCalculator1D(FluxCalculatorND):
         solver = IterativeRiemannSolver(gamma)
         for i, dens_flux in enumerate(density_fluxes):
             # Generate left and right states from cell averaged values
+
             left_state = ThermodynamicState1D(half_step_pressures_R[i],
                                               half_step_densities_R[i],
                                               half_step_velocities_R[i],

@@ -80,11 +80,11 @@ def example():
     membrane_location = [0.3, 0.5, 0.5, 0.4, 0.8]
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
-    run_god = True
+    run_god = False
     run_rc = False
     run_hllc = False
-    run_muscl = True   # CURRENTLY BROKEN - needs flux limiters
-    for i in range(0, 1):
+    run_muscl = True
+    for i in range(0, 5):
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 

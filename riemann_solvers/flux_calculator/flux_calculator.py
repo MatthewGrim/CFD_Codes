@@ -58,10 +58,10 @@ class FluxCalculator1D(FluxCalculatorND):
     @staticmethod
     def calculate_muscl_fluxes(densities, pressures, velocities, gamma, dt_over_dx):
         """
-        Function used to calculate fluxes for a 1D simulation using a MUSCL Scheme - Toro, Chapter 13/14
+        Function used to calculate fluxes for a 1D simulation using a MUSCL Hancock Scheme - Toro 14.4
         """
         # Get half step densities
-        limiter = MinBeeLimiter()
+        limiter = SuperBeeLimiter()
         half_step_densities_L = np.zeros(len(densities) - 2)
         half_step_velocities_L = np.zeros(len(densities) - 2)
         half_step_pressures_L = np.zeros(len(densities) - 2)

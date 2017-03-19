@@ -26,7 +26,7 @@ class BaseLimiter(object):
     @staticmethod
     def _calculate_eta_values(r_params):
         """
-        Function to calculate max allowable slope values for the left and right states
+        Function to calculate max allowable slope values for the left and right states - Toro 14.51
         """
         eta_params_L = dict()
         eta_params_R = dict()
@@ -75,6 +75,9 @@ class MinBeeLimiter(BaseLimiter):
 
     @staticmethod
     def _calculate_limiting_factors(r_params, eta_params_L, eta_params_R):
+        """
+        Toro 13.221
+        """
         eta_density = min(1.0, eta_params_R["rho"]) if r_params["rho"] > 1.0 else r_params["rho"]
         eta_momentum = min(1.0, eta_params_R["mom"]) if r_params["mom"] > 1.0 else r_params["mom"]
         eta_energy = min(1.0, eta_params_R["energy"]) if r_params["energy"] > 1.0 else r_params["energy"]
@@ -92,6 +95,9 @@ class UltraBeeLimiter(BaseLimiter):
 
     @staticmethod
     def _calculate_limiting_factors(r_params, eta_params_L, eta_params_R):
+        """
+        Toro 13.217
+        """
         if r_params["rho"] <= 0.0 or r_params["mom"] <= 0.0 or r_params["energy"] <= 0.0:
             eta_density = 0.0
             eta_momentum = 0.0
@@ -110,6 +116,9 @@ class SuperBeeLimiter(BaseLimiter):
 
     @staticmethod
     def _calculate_limiting_factors(r_params, eta_params_L, eta_params_R):
+        """
+        Toro 13.218
+        """
         if r_params["rho"] <= 0.0 or r_params["mom"] <= 0.0 or r_params["energy"] <= 0.0:
             eta_density = 0.0
             eta_momentum = 0.0

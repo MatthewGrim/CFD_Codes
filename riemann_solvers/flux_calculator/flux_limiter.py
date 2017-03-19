@@ -75,7 +75,6 @@ class MinBeeLimiter(BaseLimiter):
 
     @staticmethod
     def _calculate_limiting_factors(r_params, eta_params_L, eta_params_R):
-
         eta_density = min(1.0, eta_params_R["rho"]) if r_params["rho"] > 1.0 else r_params["rho"]
         eta_momentum = min(1.0, eta_params_R["mom"]) if r_params["mom"] > 1.0 else r_params["mom"]
         eta_energy = min(1.0, eta_params_R["energy"]) if r_params["energy"] > 1.0 else r_params["energy"]
@@ -93,7 +92,6 @@ class UltraBeeLimiter(BaseLimiter):
 
     @staticmethod
     def _calculate_limiting_factors(r_params, eta_params_L, eta_params_R):
-
         if r_params["rho"] <= 0.0 or r_params["mom"] <= 0.0 or r_params["energy"] <= 0.0:
             eta_density = 0.0
             eta_momentum = 0.0
@@ -102,6 +100,35 @@ class UltraBeeLimiter(BaseLimiter):
             eta_density = min(eta_params_L["rho"], eta_params_R["rho"])
             eta_momentum = min(eta_params_L["mom"], eta_params_R["mom"])
             eta_energy = min(eta_params_L["energy"], eta_params_R["energy"])
+
+        return eta_density, eta_momentum, eta_energy
+
+
+class SuperBeeLimiter(BaseLimiter):
+    def __init__(self):
+        super(SuperBeeLimiter, self).__init__()
+
+    @staticmethod
+    def _calculate_limiting_factors(r_params, eta_params_L, eta_params_R):
+        if r_params["rho"] <= 0.0 or r_params["mom"] <= 0.0 or r_params["energy"] <= 0.0:
+            eta_density = 0.0
+            eta_momentum = 0.0
+            eta_energy = 0.0
+        else:
+            if r_params["rho"] <= 0.5:
+                eta_density = 2 * r_params["rho"]
+            else:
+                eta_density = 1.0 if r_params["rho"] <= 1.0 else min(r_params["rho"], eta_params_R["rho"], 2.0)
+
+            if r_params["mom"] <= 0.5:
+                eta_momentum = 2 * r_params["mom"]
+            else:
+                eta_momentum = 1.0 if r_params["mom"] <= 1.0 else min(r_params["mom"], eta_params_R["mom"], 2.0)
+
+            if r_params["energy"] <= 0.5:
+                eta_energy = 2 * r_params["energy"]
+            else:
+                eta_energy = 1.0 if r_params["energy"] <= 1.0 else min(r_params["energy"], eta_params_R["energy"], 2.0)
 
         return eta_density, eta_momentum, eta_energy
 

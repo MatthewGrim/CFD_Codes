@@ -72,24 +72,20 @@ class FluxCalculator1D(FluxCalculatorND):
             idx = i + 1
 
             # Calculate slopes
-            left_density_slope = (densities[idx] - densities[idx - 1]) / 2
-            left_momentum_slope = (densities[idx] * velocities[idx] - densities[idx - 1] * velocities[idx - 1]) / 2
+            left_slopes = dict()
+            left_slopes["rho"] = (densities[idx] - densities[idx - 1]) / 2
+            left_slopes["mom"] = (densities[idx] * velocities[idx] - densities[idx - 1] * velocities[idx - 1]) / 2
             cell_energy = 0.5 * densities[idx] * velocities[idx] * velocities[idx] + pressures[idx] / (gamma - 1)
             behind_energy = 0.5 * densities[idx - 1] * velocities[idx - 1] * velocities[idx - 1] + pressures[idx - 1] / (gamma - 1)
-            left_energy_slope = (cell_energy - behind_energy) / 2
+            left_slopes["energy"] = (cell_energy - behind_energy) / 2
 
-            right_density_slope = (densities[idx + 1] - densities[idx]) / 2
-            right_momentum_slope = (densities[idx + 1] * velocities[idx + 1] - densities[idx] * velocities[idx]) / 2
+            right_slopes = dict()
+            right_slopes["rho"] = (densities[idx + 1] - densities[idx]) / 2
+            right_slopes["mom"] = (densities[idx + 1] * velocities[idx + 1] - densities[idx] * velocities[idx]) / 2
             forward_energy = 0.5 * densities[idx + 1] * velocities[idx + 1] * velocities[idx + 1] + pressures[idx + 1] / (gamma - 1)
-            right_energy_slope = (forward_energy - cell_energy) / 2
+            right_slopes["energy"] = (forward_energy - cell_energy) / 2
 
-            a = np.sqrt(gamma * pressures[idx] / densities[idx])
-            c = dt_over_dx * a
-            average_density_slope, average_momentum_slope, average_energy_slope = \
-                limiter.calculate_limited_slopes(left_density_slope, right_density_slope,
-                                                 left_momentum_slope, right_momentum_slope,
-                                                 left_energy_slope, right_energy_slope,
-                                                 c)
+            average_density_slope, average_momentum_slope, average_energy_slope = limiter.calculate_limited_slopes(left_slopes, right_slopes)
 
             # Interpolate left and right densities
             left_density = densities[idx] - average_density_slope

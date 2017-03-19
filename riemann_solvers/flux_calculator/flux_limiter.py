@@ -10,40 +10,39 @@ import numpy as np
 
 class BaseLimiter(object):
     @staticmethod
-    def _calculate_slope_ratios(left_rho_slope, right_rho_slope,
-                               left_mom_slope, right_mom_slope,
-                               left_energy_slope, right_energy_slope):
+    def _calculate_slope_ratios(left_slopes, right_slopes):
         """
         Function used to calculate to ratio of the different conservative variables
         """
         TOL = 1e-14
 
-        r_density = 0.0 if np.isclose(right_rho_slope, 0.0, atol=TOL) else left_rho_slope / right_rho_slope
-        r_momentum = 0.0 if np.isclose(right_mom_slope, 0.0, atol=TOL) else left_mom_slope / right_mom_slope
-        r_energy = 0.0 if np.isclose(right_energy_slope, 0.0, atol=TOL) else left_energy_slope / right_energy_slope
+        slope_ratios = dict()
+        slope_ratios["rho"] = 0.0 if np.isclose(right_slopes["rho"], 0.0, atol=TOL) else left_slopes["rho"] / right_slopes["rho"]
+        slope_ratios["mom"] = 0.0 if np.isclose(right_slopes["mom"], 0.0, atol=TOL) else left_slopes["mom"] / right_slopes["mom"]
+        slope_ratios["energy"] = 0.0 if np.isclose(right_slopes["energy"], 0.0, atol=TOL) else left_slopes["energy"] / right_slopes["energy"]
 
-        return r_density, r_momentum, r_energy
+        return slope_ratios
 
     @staticmethod
-    def _calculate_eta_values(c, r_density, r_momentum, r_energy):
+    def _calculate_eta_values(r_params):
         """
         Function to calculate max allowable slope values for the left and right states
         """
+        eta_params_L = dict()
+        eta_params_R = dict()
         beta_R = 1.0
         beta_L = 1.0
-        eta_density_L = 2.0 * beta_L * r_density / (1 + r_density)
-        eta_momentum_L = 2.0 * beta_L * r_momentum / (1 + r_momentum)
-        eta_energy_L = 2.0 * beta_L * r_energy / (1 + r_energy)
-        eta_density_R = 2.0 * beta_R / (1 + r_density)
-        eta_momentum_R = 2.0 * beta_R / (1 + r_momentum)
-        eta_energy_R = 2.0 * beta_R / (1 + r_energy)
+        eta_params_L["rho"] = 2.0 * beta_L * r_params["rho"] / (1 + r_params["rho"])
+        eta_params_L["mom"] = 2.0 * beta_L * r_params["mom"] / (1 + r_params["mom"])
+        eta_params_L["energy"] = 2.0 * beta_L * r_params["energy"] / (1 + r_params["energy"])
+        eta_params_R["rho"] = 2.0 * beta_R / (1 + r_params["rho"])
+        eta_params_R["mom"] = 2.0 * beta_R / (1 + r_params["mom"])
+        eta_params_R["energy"] = 2.0 * beta_R / (1 + r_params["energy"])
 
-        return eta_density_L, eta_momentum_L, eta_energy_L, eta_density_R, eta_momentum_R, eta_energy_R
+        return eta_params_L, eta_params_R
 
     @staticmethod
-    def _calculate_limiting_factors(r_density, r_momentum, r_energy,
-                                    eta_density_L, eta_momentum_L, eta_energy_L,
-                                    eta_density_R, eta_momentum_R, eta_energy_R):
+    def _calculate_limiting_factors(r_params, eta_params_L, eta_params_R):
         """
         Function to calculate the limiting factors for each conservative variable, to be implemented in sub-classes
         """
@@ -51,31 +50,21 @@ class BaseLimiter(object):
 
 
     @classmethod
-    def calculate_limited_slopes(cls,
-                                 left_rho_slope, right_rho_slope,
-                                 left_mom_slope, right_mom_slope,
-                                 left_energy_slope, right_energy_slope,
-                                 c):
+    def calculate_limited_slopes(cls, left_slopes, right_slopes):
         """
         Function that performs an operation to bound the slopes within the TVD region
         """
-        r_density, r_momentum, r_energy = BaseLimiter._calculate_slope_ratios(left_rho_slope, right_rho_slope,
-                                                                                left_mom_slope, right_mom_slope,
-                                                                                left_energy_slope, right_energy_slope)
+        assert isinstance(left_slopes, dict)
+        assert isinstance(right_slopes, dict)
+        r_params = BaseLimiter._calculate_slope_ratios(left_slopes, right_slopes)
 
-        eta_density_L, eta_momentum_L, eta_energy_L, eta_density_R, eta_momentum_R, eta_energy_R = \
-            MinBeeLimiter._calculate_eta_values(c,
-                                                r_density,
-                                                r_momentum,
-                                                r_energy)
+        eta_params_L, eta_params_R = BaseLimiter._calculate_eta_values(r_params)
 
-        eta_density, eta_momentum, eta_energy = cls._calculate_limiting_factors(r_density, r_momentum, r_energy,
-                                                                                eta_density_L, eta_momentum_L, eta_energy_L,
-                                                                                eta_density_R, eta_momentum_R, eta_energy_R)
+        eta_density, eta_momentum, eta_energy = cls._calculate_limiting_factors(r_params, eta_params_L, eta_params_R)
 
-        average_density_slope = 0.5 * (left_rho_slope + right_rho_slope) * eta_density
-        average_momentum_slope = 0.5 * (left_mom_slope + right_mom_slope) * eta_momentum
-        average_energy_slope = 0.5 * (left_energy_slope + right_energy_slope) * eta_energy
+        average_density_slope = 0.5 * (left_slopes["rho"] + right_slopes["rho"]) * eta_density
+        average_momentum_slope = 0.5 * (left_slopes["mom"] + right_slopes["mom"]) * eta_momentum
+        average_energy_slope = 0.5 * (left_slopes["energy"] + right_slopes["energy"]) * eta_energy
 
         return average_density_slope, average_momentum_slope, average_energy_slope
 
@@ -85,14 +74,12 @@ class MinBeeLimiter(BaseLimiter):
         super(MinBeeLimiter, self).__init__()
 
     @staticmethod
-    def _calculate_limiting_factors(r_density, r_momentum, r_energy,
-                                    eta_density_L, eta_momentum_L, eta_energy_L,
-                                    eta_density_R, eta_momentum_R, eta_energy_R):
+    def _calculate_limiting_factors(r_params, eta_params_L, eta_params_R):
 
-        eta_density = min(1.0, eta_density_R) if r_density > 1.0 else r_density
-        eta_momentum = min(1.0, eta_momentum_R) if r_momentum > 1.0 else r_momentum
-        eta_energy = min(1.0, eta_energy_R) if r_energy > 1.0 else r_energy
-        if r_density <= 0.0 or r_momentum <= 0.0 or r_energy <= 0.0:
+        eta_density = min(1.0, eta_params_R["rho"]) if r_params["rho"] > 1.0 else r_params["rho"]
+        eta_momentum = min(1.0, eta_params_R["mom"]) if r_params["mom"] > 1.0 else r_params["mom"]
+        eta_energy = min(1.0, eta_params_R["energy"]) if r_params["energy"] > 1.0 else r_params["energy"]
+        if r_params["rho"] <= 0.0 or r_params["mom"] <= 0.0 or r_params["energy"] <= 0.0:
             eta_density = 0.0
             eta_momentum = 0.0
             eta_energy = 0.0
@@ -105,18 +92,16 @@ class UltraBeeLimiter(BaseLimiter):
         super(UltraBeeLimiter, self).__init__()
 
     @staticmethod
-    def _calculate_limiting_factors(r_density, r_momentum, r_energy,
-                                    eta_density_L, eta_momentum_L, eta_energy_L,
-                                    eta_density_R, eta_momentum_R, eta_energy_R):
+    def _calculate_limiting_factors(r_params, eta_params_L, eta_params_R):
 
-        if r_density <= 0.0 or r_momentum <= 0.0 or r_energy <= 0.0:
+        if r_params["rho"] <= 0.0 or r_params["mom"] <= 0.0 or r_params["energy"] <= 0.0:
             eta_density = 0.0
             eta_momentum = 0.0
             eta_energy = 0.0
         else:
-            eta_density = min(eta_density_L, eta_density_R)
-            eta_momentum = min(eta_momentum_L, eta_momentum_R)
-            eta_energy = min(eta_energy_L, eta_energy_R)
+            eta_density = min(eta_params_L["rho"], eta_params_R["rho"])
+            eta_momentum = min(eta_params_L["mom"], eta_params_R["mom"])
+            eta_energy = min(eta_params_L["energy"], eta_params_R["energy"])
 
         return eta_density, eta_momentum, eta_energy
 

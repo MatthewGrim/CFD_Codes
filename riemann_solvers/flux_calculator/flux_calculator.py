@@ -61,6 +61,7 @@ class FluxCalculator1D(FluxCalculatorND):
         Function used to calculate fluxes for a 1D simulation using a MUSCL Scheme - Toro, Chapter 13/14
         """
         # Get half step densities
+        limiter = MinBeeLimiter()
         half_step_densities_L = np.zeros(len(densities) - 2)
         half_step_velocities_L = np.zeros(len(densities) - 2)
         half_step_pressures_L = np.zeros(len(densities) - 2)
@@ -85,10 +86,10 @@ class FluxCalculator1D(FluxCalculatorND):
             a = np.sqrt(gamma * pressures[idx] / densities[idx])
             c = dt_over_dx * a
             average_density_slope, average_momentum_slope, average_energy_slope = \
-                UltraBeeLimiter.calculate_limited_slopes(left_density_slope, right_density_slope,
-                                                       left_momentum_slope, right_momentum_slope,
-                                                       left_energy_slope, right_energy_slope,
-                                                       c)
+                limiter.calculate_limited_slopes(left_density_slope, right_density_slope,
+                                                 left_momentum_slope, right_momentum_slope,
+                                                 left_energy_slope, right_energy_slope,
+                                                 c)
 
             # Interpolate left and right densities
             left_density = densities[idx] - average_density_slope

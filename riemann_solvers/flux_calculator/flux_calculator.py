@@ -34,12 +34,12 @@ class FluxCalculator1D(FluxCalculatorND):
         momentum_fluxes = np.zeros(len(densities) - 1)
         total_energy_fluxes = np.zeros(len(densities) - 1)
 
-        solver = IterativeRiemannSolver(gamma)
-
         for i, dens_flux in enumerate(density_fluxes):
+            solver = IterativeRiemannSolver(gamma[i])
+
             # Generate left and right states from cell averaged values
-            left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma)
-            right_state = ThermodynamicState1D(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma)
+            left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma[i])
+            right_state = ThermodynamicState1D(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma[i + 1])
 
             # Solve Riemann problem for star states
             p_star, u_star = solver.get_star_states(left_state, right_state)
@@ -75,14 +75,14 @@ class FluxCalculator1D(FluxCalculatorND):
             left_slopes = dict()
             left_slopes["rho"] = (densities[idx] - densities[idx - 1]) / 2
             left_slopes["mom"] = (densities[idx] * velocities[idx] - densities[idx - 1] * velocities[idx - 1]) / 2
-            cell_energy = 0.5 * densities[idx] * velocities[idx] * velocities[idx] + pressures[idx] / (gamma - 1)
-            behind_energy = 0.5 * densities[idx - 1] * velocities[idx - 1] * velocities[idx - 1] + pressures[idx - 1] / (gamma - 1)
+            cell_energy = 0.5 * densities[idx] * velocities[idx] * velocities[idx] + pressures[idx] / (gamma[idx] - 1)
+            behind_energy = 0.5 * densities[idx - 1] * velocities[idx - 1] * velocities[idx - 1] + pressures[idx - 1] / (gamma[idx - 1] - 1)
             left_slopes["energy"] = (cell_energy - behind_energy) / 2
 
             right_slopes = dict()
             right_slopes["rho"] = (densities[idx + 1] - densities[idx]) / 2
             right_slopes["mom"] = (densities[idx + 1] * velocities[idx + 1] - densities[idx] * velocities[idx]) / 2
-            forward_energy = 0.5 * densities[idx + 1] * velocities[idx + 1] * velocities[idx + 1] + pressures[idx + 1] / (gamma - 1)
+            forward_energy = 0.5 * densities[idx + 1] * velocities[idx + 1] * velocities[idx + 1] + pressures[idx + 1] / (gamma[idx + 1] - 1)
             right_slopes["energy"] = (forward_energy - cell_energy) / 2
 
             average_density_slope, average_momentum_slope, average_energy_slope = limiter.calculate_limited_slopes(left_slopes, right_slopes)
@@ -104,14 +104,14 @@ class FluxCalculator1D(FluxCalculatorND):
             left_velocity = left_momentum / left_density
             left_density_flux = left_momentum
             left_internal_energy = left_energy - 0.5 * left_momentum * left_velocity
-            left_pressure = left_internal_energy * (gamma - 1)
+            left_pressure = left_internal_energy * (gamma[idx] - 1)
             left_momentum_flux = left_momentum * left_velocity + left_pressure
             left_energy_flux = (left_energy + left_pressure) * left_velocity
 
             right_velocity = right_momentum / right_density
             right_density_flux = right_momentum
             right_internal_energy = right_energy - 0.5 * right_momentum * right_velocity
-            right_pressure = right_internal_energy * (gamma - 1)
+            right_pressure = right_internal_energy * (gamma[idx] - 1)
             right_momentum_flux = right_momentum * right_velocity + right_pressure
             right_energy_flux = (right_energy + right_pressure) * right_velocity
 
@@ -119,7 +119,7 @@ class FluxCalculator1D(FluxCalculatorND):
             half_step_momentum_flux = (left_momentum_flux - right_momentum_flux) * dt_over_dx * 0.5
             half_step_energy_flux = (left_energy_flux - right_energy_flux) * dt_over_dx * 0.5
 
-            state = ThermodynamicState1D(left_pressure, left_density, left_velocity, gamma)
+            state = ThermodynamicState1D(left_pressure, left_density, left_velocity, gamma[idx])
             state.update_states(half_step_density_flux,
                                 half_step_momentum_flux,
                                 half_step_energy_flux)
@@ -127,7 +127,7 @@ class FluxCalculator1D(FluxCalculatorND):
             half_step_velocities_L[i] = state.u
             half_step_pressures_L[i] = state.p
 
-            state = ThermodynamicState1D(right_pressure, right_density, right_velocity, gamma)
+            state = ThermodynamicState1D(right_pressure, right_density, right_velocity, gamma[idx])
             state.update_states(half_step_density_flux,
                                 half_step_momentum_flux,
                                 half_step_energy_flux)
@@ -140,18 +140,18 @@ class FluxCalculator1D(FluxCalculatorND):
         momentum_fluxes = np.zeros(len(half_step_densities_R) - 1)
         total_energy_fluxes = np.zeros(len(half_step_densities_R) - 1)
 
-        solver = IterativeRiemannSolver(gamma)
         for i, dens_flux in enumerate(density_fluxes):
-            # Generate left and right states from cell averaged values
+            solver = IterativeRiemannSolver(gamma[i + 1])
 
+            # Generate left and right states from cell averaged values
             left_state = ThermodynamicState1D(half_step_pressures_R[i],
                                               half_step_densities_R[i],
                                               half_step_velocities_R[i],
-                                              gamma)
+                                              gamma[i])
             right_state = ThermodynamicState1D(half_step_pressures_L[i + 1],
                                                half_step_densities_L[i + 1],
                                                half_step_velocities_L[i + 1],
-                                               gamma)
+                                               gamma[i + 1])
 
             # Solve Riemann problem for star states
             p_star, u_star = solver.get_star_states(left_state, right_state)
@@ -176,11 +176,11 @@ class FluxCalculator1D(FluxCalculatorND):
         momentum_fluxes = np.zeros(len(densities) - 1)
         total_energy_fluxes = np.zeros(len(densities) - 1)
 
-        solver = HLLCRiemannSolver(gamma)
         for i, dens_flux in enumerate(density_fluxes):
+            solver = HLLCRiemannSolver(gamma[i + 1])
             # Generate left and right states from cell averaged values
-            left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma)
-            right_state = ThermodynamicState1D(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma)
+            left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma[i])
+            right_state = ThermodynamicState1D(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma[i + 1])
 
             density_fluxes[i], momentum_fluxes[i], total_energy_fluxes[i] = solver.evaluate_flux(left_state, right_state)
 
@@ -196,13 +196,14 @@ class FluxCalculator1D(FluxCalculatorND):
         momentum_fluxes = np.zeros(len(densities) - 1)
         total_energy_fluxes = np.zeros(len(densities) - 1)
 
-        solver = IterativeRiemannSolver(gamma)
         theta = VanDerCorput.calculate_theta(ts, 2, 1)
         for i in range(len(densities) - 2):
+            solver = IterativeRiemannSolver(gamma[i + 1])
+
             # Generate left and right states from cell averaged values
-            left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma)
-            mid_state = ThermodynamicState1D(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma)
-            right_state = ThermodynamicState1D(pressures[i + 2], densities[i + 2], velocities[i + 2], gamma)
+            left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma[i])
+            mid_state = ThermodynamicState1D(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma[i + 1])
+            right_state = ThermodynamicState1D(pressures[i + 2], densities[i + 2], velocities[i + 2], gamma[i + 2])
 
             # Solve Riemann problem for star states on either side of the cell
             p_star_left, u_star_left = solver.get_star_states(left_state, mid_state)
@@ -238,14 +239,14 @@ class FluxCalculator2D(FluxCalculatorND):
         momentum_flux_y = np.zeros(density_fluxes.shape)
         total_energy_fluxes = np.zeros(density_fluxes.shape)
 
-        solver = IterativeRiemannSolver(gamma)
-
         i_length, j_length = np.shape(densities)
         for i in range(i_length - 1):
             for j in range(j_length - 1):
+                solver = IterativeRiemannSolver(gamma[i, j])
+
                 # Generate left and right states from cell averaged values
-                left_state = ThermodynamicState1D(pressures[i, j], densities[i, j], vel_x[i, j], gamma)
-                right_state = ThermodynamicState1D(pressures[i + 1, j], densities[i + 1, j], vel_x[i + 1, j], gamma)
+                left_state = ThermodynamicState1D(pressures[i, j], densities[i, j], vel_x[i, j], gamma[i, j])
+                right_state = ThermodynamicState1D(pressures[i + 1, j], densities[i + 1, j], vel_x[i + 1, j], gamma[i + 1, j])
 
                 # Solve Riemann problem for star states
                 p_star, u_star = solver.get_star_states(left_state, right_state)
@@ -262,8 +263,8 @@ class FluxCalculator2D(FluxCalculatorND):
                 total_energy_fluxes[i, j - 1, 0] = (p_flux + e_tot) * u_flux
 
                 # Generate left and right states from cell averaged values
-                left_state = ThermodynamicState1D(pressures[i, j], densities[i, j], vel_y[i, j], gamma)
-                right_state = ThermodynamicState1D(pressures[i, j + 1], densities[i, j + 1], vel_y[i, j + 1], gamma)
+                left_state = ThermodynamicState1D(pressures[i, j], densities[i, j], vel_y[i, j], gamma[i, j])
+                right_state = ThermodynamicState1D(pressures[i, j + 1], densities[i, j + 1], vel_y[i, j + 1], gamma[i, j + 1])
 
                 # Solve Riemann problem for star states
                 p_star, v_star = solver.get_star_states(left_state, right_state)

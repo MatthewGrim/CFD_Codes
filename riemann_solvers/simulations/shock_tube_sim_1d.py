@@ -41,8 +41,9 @@ class ShockTube1D(BaseSimulation1D):
         self.pressures = list()
         self.vel_x = list()
         self.internal_energies = list()
-        self.gamma = left_state.gamma
+        self.gamma = list()
         for x_loc in self.x:
+            self.gamma.append(left_state.gamma)
             if x_loc < membrane_location:
                 self.densities.append(left_state.rho)
                 self.pressures.append(left_state.p)
@@ -57,6 +58,7 @@ class ShockTube1D(BaseSimulation1D):
         self.pressures = np.asarray(self.pressures)
         self.vel_x = np.asarray(self.vel_x)
         self.internal_energies = np.asarray(self.internal_energies)
+        self.gamma = np.asarray(self.gamma)
 
         self.boundary_functions = {
             BoundaryConditionND.X_LOW: lambda state : BoundaryCondition1D.transmissive_boundary_condition(state),
@@ -80,9 +82,9 @@ def example():
     membrane_location = [0.3, 0.5, 0.5, 0.4, 0.8]
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
-    run_god = False
-    run_rc = False
-    run_hllc = False
+    run_god = True
+    run_rc = True
+    run_hllc = True
     run_muscl = True
     for i in range(0, 5):
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)

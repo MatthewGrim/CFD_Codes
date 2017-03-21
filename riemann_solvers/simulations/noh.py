@@ -107,7 +107,7 @@ class Noh2D(BaseSimulation2D):
         super(Noh2D, self).__init__()
 
         num_x = 100
-        num_y = 5
+        num_y = 2
         x = np.linspace(0.4 / num_x, 0.4, num_x)
         y = np.linspace(0.4 / num_y, 0.4, num_y)
         self.x = x
@@ -124,7 +124,7 @@ class Noh2D(BaseSimulation2D):
         self.vel_x = np.zeros(self.densities.shape)
         self.vel_y = np.zeros(self.densities.shape)
         self.internal_energies = np.zeros(self.densities.shape)
-        self.gamma = initial_state.gamma
+        self.gamma = np.zeros(self.densities.shape)
         for i in range(num_x):
             for j in range(num_y):
                 self.densities[i, j] = initial_state.rho
@@ -132,6 +132,7 @@ class Noh2D(BaseSimulation2D):
                 self.vel_x[i, j] = initial_state.u
                 self.vel_y[i, j] = initial_state.v
                 self.internal_energies[i, j] = initial_state.e_int
+                self.gamma[i, j] = initial_state.gamma
 
         self.boundary_functions = {
             BoundaryConditionND.X_LOW: lambda state, y_loc : BoundaryCondition2D.reflecting_boundary_condition(state,
@@ -265,5 +266,5 @@ def test_noh_2d():
 
 
 if __name__ == '__main__':
-    test_noh_1d()
-    # test_noh_2d()
+    # test_noh_1d()
+    test_noh_2d()

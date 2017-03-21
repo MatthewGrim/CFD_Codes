@@ -44,7 +44,7 @@ class DoubleMach2D(BaseSimulation2D):
         self.CFL = CFL
         self.flux_calculator = flux_calculator
 
-        self.gamma = 1.4
+        self.gamma = np.zeros((num_x, num_y))
         self.densities = np.zeros((num_x, num_y))
         self.pressures = np.zeros((num_x, num_y))
         self.vel_x = np.zeros((num_x, num_y))
@@ -52,18 +52,20 @@ class DoubleMach2D(BaseSimulation2D):
         self.internal_energies = np.zeros((num_x, num_y))
 
         # Initialise states
-        ahead_state = ThermodynamicState2D(1.0, 1.4, 0.0, 0.0, self.gamma)
+        gamma = 1.4
+        ahead_state = ThermodynamicState2D(1.0, 1.4, 0.0, 0.0, gamma)
         rho_shock = 5.714
         p_shock = 116.5
         # sound_speed = np.sqrt(self.gamma * p_shock / rho_shock)
         sound_speed = ahead_state.sound_speed()
         u_shock = sound_speed * 10.0 * np.cos(theta)
         v_shock = -sound_speed * 10.0 * np.sin(theta)
-        self.shock_state = ThermodynamicState2D(p_shock, rho_shock, u_shock, v_shock, self.gamma)
+        self.shock_state = ThermodynamicState2D(p_shock, rho_shock, u_shock, v_shock, gamma)
         for i in range(num_x):
             for j in range(num_y):
                 x_pt = self.x[i]
                 y_pt = self.y[j]
+                self.gamma[i, j] = gamma
                 if x_pt <= 0.6 + y_pt * np.tan(theta):
                     self.densities[i, j] = self.shock_state.rho
                     self.pressures[i, j] = self.shock_state.p

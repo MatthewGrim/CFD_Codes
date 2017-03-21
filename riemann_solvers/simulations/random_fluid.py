@@ -42,7 +42,7 @@ class RandomFluid2D(BaseSimulation2D):
         self.CFL = CFL
         self.flux_calculator = flux_calculator
 
-        self.gamma = mean_state.gamma
+        self.gamma = np.zeros((num_pts, num_pts))
         self.densities = np.zeros((num_pts, num_pts))
         self.pressures = np.zeros((num_pts, num_pts))
         self.vel_x = np.zeros((num_pts, num_pts))
@@ -55,6 +55,7 @@ class RandomFluid2D(BaseSimulation2D):
                 self.vel_x[i, j] = random.normalvariate(mean_state.u, standard_deviation)
                 self.vel_y[i, j] = random.normalvariate(mean_state.v, standard_deviation)
                 self.internal_energies[i, j] = np.abs(random.normalvariate(mean_state.e_int, standard_deviation * mean_state.e_int))
+                self.gamma[i, j] = mean_state.gamma
 
         self.boundary_functions = {
             BoundaryConditionND.X_LOW: lambda state, y_loc: BoundaryCondition2D.reflecting_boundary_condition(state,

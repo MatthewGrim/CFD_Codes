@@ -35,7 +35,7 @@ class FluxCalculator1D(FluxCalculatorND):
         total_energy_fluxes = np.zeros(len(densities) - 1)
 
         for i, dens_flux in enumerate(density_fluxes):
-            solver = IterativeRiemannSolver(gamma[i])
+            solver = IterativeRiemannSolver()
 
             # Generate left and right states from cell averaged values
             left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma[i])
@@ -45,12 +45,13 @@ class FluxCalculator1D(FluxCalculatorND):
             p_star, u_star = solver.get_star_states(left_state, right_state)
 
             # Calculate fluxes using solver sample function
-            p_flux, u_flux, rho_flux, _ = solver.sample(0.0, left_state, right_state, p_star, u_star)
+            p_flux, u_flux, rho_flux, is_left = solver.sample(0.0, left_state, right_state, p_star, u_star)
 
             # Store fluxes in array
+            flux_gamma = left_state.gamma if is_left else right_state.gamma
             density_fluxes[i] = rho_flux * u_flux
             momentum_fluxes[i] = rho_flux * u_flux * u_flux + p_flux
-            e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
+            e_tot = p_flux / (flux_gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
             total_energy_fluxes[i] = (p_flux + e_tot) * u_flux
 
         return density_fluxes, momentum_fluxes, total_energy_fluxes
@@ -141,7 +142,7 @@ class FluxCalculator1D(FluxCalculatorND):
         total_energy_fluxes = np.zeros(len(half_step_densities_R) - 1)
 
         for i, dens_flux in enumerate(density_fluxes):
-            solver = IterativeRiemannSolver(gamma[i + 1])
+            solver = IterativeRiemannSolver()
 
             # Generate left and right states from cell averaged values
             left_state = ThermodynamicState1D(half_step_pressures_R[i],
@@ -157,12 +158,13 @@ class FluxCalculator1D(FluxCalculatorND):
             p_star, u_star = solver.get_star_states(left_state, right_state)
 
             # Calculate fluxes using solver sample function
-            p_flux, u_flux, rho_flux, _ = solver.sample(0.0, left_state, right_state, p_star, u_star)
+            p_flux, u_flux, rho_flux, is_left = solver.sample(0.0, left_state, right_state, p_star, u_star)
 
             # Store fluxes in array
+            flux_gamma = left_state.gamma if is_left else right_state.gamma
             density_fluxes[i] = rho_flux * u_flux
             momentum_fluxes[i] = rho_flux * u_flux * u_flux + p_flux
-            e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
+            e_tot = p_flux / (flux_gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
             total_energy_fluxes[i] = (p_flux + e_tot) * u_flux
 
         return density_fluxes, momentum_fluxes, total_energy_fluxes
@@ -198,7 +200,7 @@ class FluxCalculator1D(FluxCalculatorND):
 
         theta = VanDerCorput.calculate_theta(ts, 2, 1)
         for i in range(len(densities) - 2):
-            solver = IterativeRiemannSolver(gamma[i + 1])
+            solver = IterativeRiemannSolver()
 
             # Generate left and right states from cell averaged values
             left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma[i])
@@ -211,16 +213,17 @@ class FluxCalculator1D(FluxCalculatorND):
 
             # Calculate fluxes using solver sample function
             if theta <= 0.5:
-                p_flux, u_flux, rho_flux, _ = solver.sample(theta * dx_over_dt, left_state, mid_state,
-                                                         p_star_left, u_star_left)
+                p_flux, u_flux, rho_flux, is_left = solver.sample(theta * dx_over_dt, left_state, mid_state,
+                                                                  p_star_left, u_star_left)
             else:
-                p_flux, u_flux, rho_flux, _ = solver.sample((theta - 1) * dx_over_dt, mid_state, right_state,
-                                                         p_star_right, u_star_right)
+                p_flux, u_flux, rho_flux, is_left = solver.sample((theta - 1) * dx_over_dt, mid_state, right_state,
+                                                                  p_star_right, u_star_right)
 
             # Store fluxes in array
+            flux_gamma = left_state.gamma if is_left else right_state.gamma
             density_fluxes[i] = rho_flux
             momentum_fluxes[i] = rho_flux * u_flux
-            total_energy_fluxes[i] = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
+            total_energy_fluxes[i] = p_flux / (flux_gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
 
         return density_fluxes, momentum_fluxes, total_energy_fluxes
 
@@ -242,7 +245,7 @@ class FluxCalculator2D(FluxCalculatorND):
         i_length, j_length = np.shape(densities)
         for i in range(i_length - 1):
             for j in range(j_length - 1):
-                solver = IterativeRiemannSolver(gamma[i, j])
+                solver = IterativeRiemannSolver()
 
                 # Generate left and right states from cell averaged values
                 left_state = ThermodynamicState1D(pressures[i, j], densities[i, j], vel_x[i, j], gamma[i, j])
@@ -256,10 +259,11 @@ class FluxCalculator2D(FluxCalculatorND):
 
                 # Store fluxes in array
                 v_y = vel_y[i, j] if is_left else vel_y[i + 1, j]
+                flux_gamma = left_state.gamma if is_left else right_state.gamma
                 density_fluxes[i, j - 1, 0] = rho_flux * u_flux
                 momentum_flux_x[i, j - 1, 0] = rho_flux * u_flux * u_flux + p_flux
                 momentum_flux_y[i, j - 1, 0] = rho_flux * u_flux * v_y
-                e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * u_flux * u_flux + 0.5 * rho_flux * v_y ** 2
+                e_tot = p_flux / (flux_gamma - 1) + 0.5 * rho_flux * u_flux * u_flux + 0.5 * rho_flux * v_y ** 2
                 total_energy_fluxes[i, j - 1, 0] = (p_flux + e_tot) * u_flux
 
                 # Generate left and right states from cell averaged values
@@ -274,10 +278,11 @@ class FluxCalculator2D(FluxCalculatorND):
 
                 # Store fluxes in array
                 v_x = vel_x[i, j] if is_left else vel_x[i, j + 1]
+                flux_gamma = left_state.gamma if is_left else right_state.gamma
                 density_fluxes[i - 1, j, 1] = rho_flux * v_flux
                 momentum_flux_x[i - 1, j, 1] = rho_flux * v_x * v_flux
                 momentum_flux_y[i - 1, j, 1] = rho_flux * v_flux * v_flux + p_flux
-                e_tot = p_flux / (left_state.gamma - 1) + 0.5 * rho_flux * v_flux * v_flux + 0.5 * rho_flux * v_x ** 2
+                e_tot = p_flux / (flux_gamma - 1) + 0.5 * rho_flux * v_flux * v_flux + 0.5 * rho_flux * v_x ** 2
                 total_energy_fluxes[i - 1, j, 1] = (p_flux + e_tot) * v_flux
 
         return density_fluxes, momentum_flux_x, momentum_flux_y, total_energy_fluxes

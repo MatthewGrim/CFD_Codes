@@ -21,7 +21,7 @@ class AnalyticShockTube(object):
 
         self.left_state = left_state
         self.right_state = right_state
-        self.solver = IterativeRiemannSolver(left_state.gamma)
+        self.solver = IterativeRiemannSolver()
         self.membrane_location = membrane_location
         self.x = np.linspace(0, 1, num_pts)
         self.rho = np.zeros(num_pts)
@@ -42,12 +42,13 @@ class AnalyticShockTube(object):
         for i, x_pos in enumerate(self.x):
             x_over_t = (x_pos - membrane_loc) / time
 
-            p, u, rho, _ = self.solver.sample(x_over_t, self.left_state, self.right_state, p_star, u_star)
+            p, u, rho, is_left = self.solver.sample(x_over_t, self.left_state, self.right_state, p_star, u_star)
 
+            gamma = self.left_state.gamma if is_left else self.right_state.gamma
             self.rho[i] = rho
             self.u[i] = u
             self.p[i] = p
-            self.e[i] = p / (rho * (self.solver.gamma - 1))
+            self.e[i] = p / (rho * (gamma - 1))
 
         return self.x, self.rho, self.u, self.p, self.e
 

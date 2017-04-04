@@ -10,7 +10,7 @@ import numpy as np
 
 
 class ThermodynamicState1D(object):
-    def __init__(self, pressure, density, velocity, gamma):
+    def __init__(self, pressure, density, velocity, gamma, mass_ratios=[1.0]):
         assert isinstance(pressure, float)
         assert isinstance(density, float)
         assert isinstance(velocity, float)
@@ -24,6 +24,8 @@ class ThermodynamicState1D(object):
         self.mom = self.u * self.rho
         self.e_kin = 0.5 * self.rho * self.u * self.u
         self.e_int = pressure / (self.rho * (gamma - 1))
+
+        self.mass_ratios = mass_ratios
 
     def sound_speed(self):
         return np.sqrt(self.gamma * self.p / self.rho)

@@ -12,15 +12,14 @@ from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicSt
 
 
 class BaseRiemannSolver(object):
-    def __init__(self, gamma):
-        assert isinstance(gamma, float)
-        self.gamma = gamma
+    def __init__(self):
+        pass
 
     def _estimate_p_star(self, left, right):
         """
         :return: an estimate for p_star used in the iterative scheme
         """
-        gamma = self.gamma
+        gamma = left.gamma
         G1 = (gamma - 1.0) / (2.0 * gamma)
         G3 = (2.0 * gamma) / (gamma - 1.0)
         G4 = 2.0 / (gamma - 1.0)
@@ -56,24 +55,24 @@ class IterativeRiemannSolver(BaseRiemannSolver):
     """
     Exact Riemann solver based on a Newton Raphson iterative scheme, outlined in Toro - Chapter 4
     """
-    def __init__(self, gamma):
-        super(IterativeRiemannSolver, self).__init__(gamma)
+    def __init__(self):
+        super(IterativeRiemannSolver, self).__init__()
 
-    def __get_A(self, rho):
+    def __get_A(self, rho, gamma):
         """
         rho: density in the system outside of the star region on either the right or left.
         
         :return: the coefficient A for the solution of f 
         """
-        return 2.0 / ((self.gamma + 1) * rho)
+        return 2.0 / ((gamma + 1) * rho)
     
-    def __get_B(self, pressure):
+    def __get_B(self, pressure, gamma):
         """
         pressure: the pressure in the system outside the star region on either the right or left.
         
         :return: the coefficient B for the solution of f 
         """
-        return (self.gamma - 1) / (self.gamma + 1) * pressure
+        return (gamma - 1) / (gamma + 1) * pressure
     
     def __f(self, p_star, outer):
         """
@@ -86,11 +85,11 @@ class IterativeRiemannSolver(BaseRiemannSolver):
         """
         
         if p_star <= outer.p:
-            return 2.0 * outer.sound_speed() / (self.gamma - 1) * \
-                   ((p_star / outer.p) ** ((self.gamma - 1) / (2 * self.gamma)) - 1)
+            return 2.0 * outer.sound_speed() / (outer.gamma - 1) * \
+                   ((p_star / outer.p) ** ((outer.gamma - 1) / (2 * outer.gamma)) - 1)
         else:
-            A = self.__get_A(outer.rho)
-            B = self.__get_B(outer.p)
+            A = self.__get_A(outer.rho, outer.gamma)
+            B = self.__get_B(outer.p, outer.gamma)
             
             return (p_star - outer.p) * (A / (p_star + B)) ** 0.5
 
@@ -112,10 +111,10 @@ class IterativeRiemannSolver(BaseRiemannSolver):
         """
 
         if p_star <= outer.p:
-            return 1.0 / (outer.rho * outer.sound_speed()) * (p_star / outer.p) ** (-(self.gamma + 1) / (2 * self.gamma))
+            return 1.0 / (outer.rho * outer.sound_speed()) * (p_star / outer.p) ** (-(outer.gamma + 1) / (2 * outer.gamma))
         else:
-            A = self.__get_A(outer.rho)
-            B = self.__get_B(outer.p)
+            A = self.__get_A(outer.rho, outer.gamma)
+            B = self.__get_B(outer.p, outer.gamma)
 
             return (1 - (p_star - outer.p) / (2 * (B + p_star))) * (A / (p_star + B)) ** 0.5
 
@@ -178,6 +177,7 @@ class IterativeRiemannSolver(BaseRiemannSolver):
         """
         Function that checks the positivity condition to determine whether the left and right states lead to a vacuum
         """
+        # raise NotImplementedError("Fix gamma implementation to be variable gamma!")
         vacuum_condition = (left_state.sound_speed() + right_state.sound_speed()) * 2.0 / (left_state.gamma - 1)
         velocity_difference = right_state.u - left_state.u
 
@@ -191,13 +191,13 @@ class IterativeRiemannSolver(BaseRiemannSolver):
         """
         Function used to sample in a vacuum state
         """
-        gamma = self.gamma
-        S_L = left_state.u + 2 * left_state.sound_speed() / (self.gamma - 1.0)
-        S_R = right_state.u - 2 * right_state.sound_speed() / (self.gamma - 1.0)
+        S_L = left_state.u + 2 * left_state.sound_speed() / (left_state.gamma - 1.0)
+        S_R = right_state.u - 2 * right_state.sound_speed() / (right_state.gamma - 1.0)
 
         if x_over_t <= (left_state.u - left_state.sound_speed()):
             return left_state.p, left_state.u, left_state.rho, True
         elif x_over_t <= S_L:
+            gamma = left_state.gamma
             multiplier = ((2.0 / (gamma + 1)) + (gamma - 1) * (left_state.u - x_over_t) / (left_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
             rho = left_state.rho * multiplier
             u = (2.0 / (gamma + 1)) * (left_state.sound_speed() + (gamma - 1) * left_state.u / 2.0 + x_over_t)
@@ -206,6 +206,7 @@ class IterativeRiemannSolver(BaseRiemannSolver):
         elif S_L < x_over_t < S_R:
             return 0.0, S_L, 0.0, True
         elif x_over_t < right_state.u + right_state.sound_speed():
+            gamma = right_state.gamma
             multiplier = ((2.0 / (gamma + 1)) - (gamma - 1) * (right_state.u - x_over_t) / (right_state.sound_speed() * (gamma + 1))) ** (2.0 / (gamma - 1.0))
             rho = right_state.rho * multiplier
             u = (2.0 / (gamma + 1)) * (-right_state.sound_speed() + (gamma - 1) * right_state.u / 2.0 + x_over_t)
@@ -293,7 +294,9 @@ class HLLCRiemannSolver(BaseRiemannSolver):
     This riemann solver is currently only implemented in 1D
     """
     def __init__(self, gamma):
-        super(HLLCRiemannSolver, self).__init__(gamma)
+        assert isinstance(gamma, float)
+        self.gamma = gamma
+        super(HLLCRiemannSolver, self).__init__()
 
     def __evaluate_wave_speeds(self, left, right, p_estimate):
         """

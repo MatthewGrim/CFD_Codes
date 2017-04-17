@@ -63,6 +63,7 @@ class Controller1D(ControllerND):
         # Initialise multi-phase variables
         self.number_of_fluids = simulation.number_of_fluids
         self.molar_masses = simulation.molar_masses
+        self.specific_heats = simulation.specific_heats
         self.mass_ratios = simulation.mass_ratios
 
         # Sim time step variables
@@ -95,6 +96,8 @@ class Controller1D(ControllerND):
         assert isinstance(self.number_of_fluids, int)
         assert isinstance(self.molar_masses, np.ndarray)
         assert self.molar_masses.shape[0] == self.number_of_fluids
+        assert isinstance(self.specific_heats, np.ndarray)
+        assert self.specific_heats.shape[0] == self.number_of_fluids
 
         if self.number_of_fluids > 1:
             assert self.mass_ratios.shape == (self.x.shape[0], self.number_of_fluids)
@@ -276,7 +279,7 @@ class Controller1D(ControllerND):
                 total_energy_flux = (self.total_energy_fluxes[i] - self.total_energy_fluxes[i + 1]) * dt / self.dx
 
                 state = ThermodynamicState1D(self.pressures[i], self.densities[i], self.velocities[i], self.gamma[i], self.mass_ratios[i, :])
-                state.update_states(total_density_flux, total_momentum_flux, total_energy_flux)
+                state.update_states(total_density_flux, total_momentum_flux, total_energy_flux, self.specific_heats, self.molar_masses)
 
             self.densities[i] = state.rho
             self.pressures[i] = state.p

@@ -30,17 +30,23 @@ class ThermodynamicState1D(object):
     def sound_speed(self):
         return np.sqrt(self.gamma * self.p / self.rho)
 
-    def update_states(self, density_flux, momentum_flux, e_flux):
+    def update_states(self, density_flux, momentum_flux, e_flux, specific_heats, molar_masses):
         """
         Updates the thermodynamic state of the cell based on conservative fluxes into volume
 
         :param density_flux
         :param momentum_flux
         :param e_flux
+        :param specific_heats
+        :param molar_masses
         """
         assert isinstance(density_flux, float) or isinstance(density_flux, np.ndarray)
         assert isinstance(momentum_flux, float)
         assert isinstance(e_flux, float)
+        assert isinstance(specific_heats, float) or isinstance(specific_heats, np.ndarray)
+        assert isinstance(molar_masses, float) or isinstance(molar_masses, np.ndarray)
+        if isinstance(specific_heats, np.ndarray):
+            assert molar_masses.shape == specific_heats.shape
 
         e_tot_initial = self.rho * (self.e_int + self.e_kin) + e_flux
 
@@ -51,6 +57,12 @@ class ThermodynamicState1D(object):
         for mass in self.mass_ratios:
             assert mass >= 0.0 or np.isclose(mass, 0.0, 1e-14)
             assert mass <= 1.0 or np.isclose(mass, 1.0, 1e-14)
+
+        # Update gamma
+        moles = self.mass_ratios / molar_masses
+        moles_ratio = moles / moles.sum()
+        average_specific_heat = (moles_ratio * specific_heats).sum()
+        self.gamma = (average_specific_heat + 1) / average_specific_heat
 
         # Get new eos states
         self.rho += density_flux.sum()

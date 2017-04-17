@@ -22,6 +22,7 @@ class BaseSimulationND(object):
         self.number_of_fluids = 0
         self.molar_masses = 0
         self.mass_ratios = 0
+        self.specific_heats = 0
 
         self.flux_calculator = 0
         self.boundary_functions = 0

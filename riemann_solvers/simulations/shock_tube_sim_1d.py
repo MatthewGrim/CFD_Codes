@@ -39,6 +39,7 @@ class ShockTube1D(BaseSimulation1D):
         # Initialise physical states
         self.number_of_fluids = 2
         self.molar_masses = np.asarray([29.0, 29.0])
+        self.specific_heats = np.asarray([2.5, 2.5])
         self.densities = list()
         self.pressures = list()
         self.vel_x = list()

@@ -27,7 +27,7 @@ class BoundaryCondition1D(BoundaryConditionND):
     def reflecting_boundary_condition(state):
         assert isinstance(state, ThermodynamicState1D)
 
-        return ThermodynamicState1D(state.p, state.rho, -state.u, state.gamma)
+        return ThermodynamicState1D(state.p, state.rho, -state.u, state.gamma, state.mass_ratios)
 
 
 class BoundaryCondition2D(BoundaryConditionND):

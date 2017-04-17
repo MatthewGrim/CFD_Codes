@@ -27,7 +27,8 @@ class AnalyticShockTube(object):
         self.rho = np.zeros(num_pts)
         self.u = np.zeros(num_pts)
         self.p = np.zeros(num_pts)
-        self.e = np.zeros(num_pts)
+        self.e_int = np.zeros(num_pts)
+        self.e_kin = np.zeros(num_pts)
 
     def get_solution(self, time, membrane_loc):
         """
@@ -48,9 +49,10 @@ class AnalyticShockTube(object):
             self.rho[i] = rho
             self.u[i] = u
             self.p[i] = p
-            self.e[i] = p / (rho * (gamma - 1))
+            self.e_int[i] = p / (rho * (gamma - 1))
+            self.e_kin[i] = 0.5 * u ** 2
 
-        return self.x, self.rho, self.u, self.p, self.e
+        return self.x, self.rho, self.u, self.p, self.e_int, self.e_kin
 
 
 def test_sod_problems():
@@ -73,7 +75,7 @@ def test_sod_problems():
 
         sod_test = AnalyticShockTube(left_state, right_state, x[i], 1000)
 
-        x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(t[i], x[i])
+        x_sol, rho_sol, u_sol, p_sol, e_int_sol, _ = sod_test.get_solution(t[i], x[i])
 
         title = "Sod Test: {}".format(i + 1)
         num_plts_x = 2
@@ -91,7 +93,7 @@ def test_sod_problems():
         plt.plot(x_sol, p_sol)
         plt.subplot(num_plts_x, num_plts_y, 4)
         plt.title("Energy")
-        plt.plot(x_sol, e_sol)
+        plt.plot(x_sol, e_int_sol)
         plt.show()
 
 

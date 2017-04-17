@@ -6,6 +6,7 @@ This file contains a controller class used to simulate fluid systems.
 """
 
 import numpy as np
+from matplotlib import pyplot as plt
 
 from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
 from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState2D
@@ -55,6 +56,7 @@ class Controller1D(ControllerND):
         self.pressures = simulation.pressures
         self.velocities = simulation.vel_x
         self.internal_energies = simulation.internal_energies
+        self.kinetic_energies = np.ones(simulation.internal_energies.shape)
         self.dx = simulation.dx
         self.gamma = simulation.gamma
 
@@ -68,9 +70,10 @@ class Controller1D(ControllerND):
         self.CFL = simulation.CFL
 
         # Initialise flux arrays
-        self.density_fluxes = np.zeros((len(self.densities) + 1, self.number_of_fluids))
+        self.density_fluxes = np.zeros((len(self.densities) + 1))
         self.momentum_fluxes = np.zeros(len(self.densities) + 1)
         self.total_energy_fluxes = np.zeros(len(self.densities) + 1)
+        self.mass_ratio_fluxes = np.zeros((len(self.densities) + 1, self.number_of_fluids))
 
         self.flux_calculator = simulation.flux_calculator
         self.boundary_functions = simulation.boundary_functions
@@ -86,15 +89,15 @@ class Controller1D(ControllerND):
         assert isinstance(self.velocities, np.ndarray) and self.velocities.ndim == 1
         assert isinstance(self.pressures, np.ndarray) and self.pressures.ndim == 1
         assert isinstance(self.internal_energies, np.ndarray) and self.internal_energies.ndim == 1
+        assert isinstance(self.kinetic_energies, np.ndarray) and self.internal_energies.ndim == 1
         assert isinstance(self.gamma, np.ndarray) and self.gamma.ndim == 1
 
         assert isinstance(self.number_of_fluids, int)
         assert isinstance(self.molar_masses, np.ndarray)
         assert self.molar_masses.shape[0] == self.number_of_fluids
-        assert self.mass_ratios.shape == (self.x.shape[0], self.number_of_fluids)
 
         if self.number_of_fluids > 1:
-            assert self.flux_calculator is not FluxCalculator1D.RANDOM_CHOICE, "Method is currently incompatible with multi-material flow"
+            assert self.mass_ratios.shape == (self.x.shape[0], self.number_of_fluids)
             assert self.flux_calculator is not FluxCalculator1D.HLLC, "Method if currently incompatible with multi material flow"
 
         assert self.x.shape == self.densities.shape == self.velocities.shape
@@ -109,9 +112,11 @@ class Controller1D(ControllerND):
         Function used to extend the grid at the boundary conditions
         """
         i_length = len(self.densities) - 1
-        start_state = ThermodynamicState1D(self.pressures[0], self.densities[0], self.velocities[0], self.gamma[0])
+        start_state = ThermodynamicState1D(self.pressures[0], self.densities[0], self.velocities[0], self.gamma[0],
+                                           self.mass_ratios[0, :])
         end_state = ThermodynamicState1D(self.pressures[i_length], self.densities[i_length],
-                                         self.velocities[i_length], self.gamma[i_length])
+                                         self.velocities[i_length], self.gamma[i_length],
+                                         self.mass_ratios[i_length, :])
 
         if self.flux_calculator != FluxCalculator1D.MUSCL:
             new_mass_ratios = np.zeros((i_length + 3, self.number_of_fluids))
@@ -122,6 +127,7 @@ class Controller1D(ControllerND):
             self.pressures = np.append([start_state.p], self.pressures, 0)
             self.velocities = np.append([start_state.u], self.velocities, 0)
             self.internal_energies = np.append([start_state.e_int], self.internal_energies, 0)
+            self.kinetic_energies = np.append([start_state.e_kin], self.kinetic_energies, 0)
             self.gamma = np.append([start_state.gamma], self.gamma, 0)
             new_mass_ratios[0, :] = start_state.mass_ratios
 
@@ -131,8 +137,9 @@ class Controller1D(ControllerND):
             self.pressures = np.append(self.pressures, [end_state.p], 0)
             self.velocities = np.append(self.velocities, [end_state.u], 0)
             self.internal_energies = np.append(self.internal_energies, [end_state.e_int], 0)
+            self.kinetic_energies = np.append(self.kinetic_energies, [end_state.e_kin], 0)
             self.gamma = np.append(self.gamma, [end_state.gamma], 0)
-            new_mass_ratios[-1, :] = start_state.mass_ratios
+            new_mass_ratios[-1, :] = end_state.mass_ratios
         else:
             new_mass_ratios = np.zeros((i_length + 5, self.number_of_fluids))
             new_mass_ratios[2:-2, :] = self.mass_ratios
@@ -142,6 +149,7 @@ class Controller1D(ControllerND):
             self.pressures = np.append([start_state.p, start_state.p], self.pressures, 0)
             self.velocities = np.append([start_state.u, start_state.u], self.velocities, 0)
             self.internal_energies = np.append([start_state.e_int, start_state.e_int], self.internal_energies, 0)
+            self.kinetic_energies = np.append([start_state.e_kin, start_state.e_kin], self.kinetic_energies, 0)
             self.gamma = np.append([start_state.gamma, start_state.gamma], self.gamma, 0)
             new_mass_ratios[0, :] = start_state.mass_ratios
             new_mass_ratios[1, :] = start_state.mass_ratios
@@ -152,6 +160,7 @@ class Controller1D(ControllerND):
             self.pressures = np.append(self.pressures, [end_state.p, end_state.p], 0)
             self.velocities = np.append(self.velocities, [end_state.u, end_state.u], 0)
             self.internal_energies = np.append(self.internal_energies, [end_state.e_int, end_state.e_int], 0)
+            self.kinetic_energies = np.append(self.kinetic_energies, [end_state.e_kin, end_state.e_kin], 0)
             self.gamma = np.append(self.gamma, [end_state.gamma, end_state.gamma], 0)
             new_mass_ratios[-1, :] = end_state.mass_ratios
             new_mass_ratios[-2, :] = end_state.mass_ratios
@@ -166,36 +175,44 @@ class Controller1D(ControllerND):
         if self.flux_calculator == FluxCalculator1D.GODUNOV:
             self.density_fluxes, \
             self.momentum_fluxes, \
-            self.total_energy_fluxes = FluxCalculator1D.calculate_godunov_fluxes(self.densities,
-                                                                                 self.pressures,
-                                                                                 self.velocities,
-                                                                                 self.gamma)
+            self.total_energy_fluxes, \
+            self.mass_ratio_fluxes = FluxCalculator1D.calculate_godunov_fluxes(self.densities,
+                                                                               self.pressures,
+                                                                               self.velocities,
+                                                                               self.gamma,
+                                                                               self.mass_ratios)
         elif self.flux_calculator == FluxCalculator1D.RANDOM_CHOICE:
             dx_over_dt = self.dx / dt
             self.density_fluxes, \
             self.momentum_fluxes, \
-            self.total_energy_fluxes = FluxCalculator1D.calculate_random_choice_fluxes(self.densities,
+            self.total_energy_fluxes, \
+            self.mass_ratio_fluxes = FluxCalculator1D.calculate_random_choice_fluxes(self.densities,
                                                                                        self.pressures,
                                                                                        self.velocities,
                                                                                        self.gamma,
+                                                                                       self.mass_ratios,
                                                                                        ts,
                                                                                        dx_over_dt)
         elif self.flux_calculator == FluxCalculator1D.HLLC:
             self.density_fluxes, \
             self.momentum_fluxes, \
-            self.total_energy_fluxes = FluxCalculator1D.calculate_hllc_fluxes(self.densities,
+            self.total_energy_fluxes, \
+            self.mass_ratio_fluxes = FluxCalculator1D.calculate_hllc_fluxes(self.densities,
                                                                               self.pressures,
                                                                               self.velocities,
-                                                                              self.gamma)
+                                                                              self.gamma,
+                                                                              self.mass_ratios)
         elif self.flux_calculator == FluxCalculator1D.MUSCL:
             dt_over_dx = dt / self.dx
             self.density_fluxes, \
             self.momentum_fluxes, \
-            self.total_energy_fluxes = FluxCalculator1D.calculate_muscl_fluxes(self.densities,
-                                                                               self.pressures,
-                                                                               self.velocities,
-                                                                               self.gamma,
-                                                                               dt_over_dx)
+            self.total_energy_fluxes, \
+            self.mass_ratio_fluxes = FluxCalculator1D.calculate_muscl_fluxes(self.densities,
+                                                                              self.pressures,
+                                                                              self.velocities,
+                                                                              self.gamma,
+                                                                              self.mass_ratios,
+                                                                              dt_over_dx)
         else:
             raise RuntimeError("Flux calculator does not exist")
 
@@ -205,6 +222,7 @@ class Controller1D(ControllerND):
             self.pressures = self.pressures[1:grid_length - 1]
             self.velocities = self.velocities[1:grid_length - 1]
             self.internal_energies = self.internal_energies[1:grid_length - 1]
+            self.kinetic_energies = self.kinetic_energies[1:grid_length - 1]
             self.gamma = self.gamma[1:grid_length - 1]
             self.mass_ratios = self.mass_ratios[1:grid_length - 1]
         else:
@@ -212,6 +230,7 @@ class Controller1D(ControllerND):
             self.pressures = self.pressures[2:grid_length - 2]
             self.velocities = self.velocities[2:grid_length - 2]
             self.internal_energies = self.internal_energies[2:grid_length - 2]
+            self.kinetic_energies = self.kinetic_energies[2:grid_length - 2]
             self.gamma = self.gamma[2:grid_length - 2]
             self.mass_ratios = self.mass_ratios[2:grid_length - 2]
 
@@ -241,6 +260,7 @@ class Controller1D(ControllerND):
                 rho = self.density_fluxes[i]
                 momentum = self.momentum_fluxes[i]
                 total_energy = self.total_energy_fluxes[i]
+                mass_ratio = self.mass_ratio_fluxes[i]
                 gamma = self.gamma[i]
 
                 velocity = momentum / rho
@@ -248,19 +268,23 @@ class Controller1D(ControllerND):
                 internal_energy = total_energy - kinetic_energy
                 pressure = internal_energy * (gamma - 1)
 
-                state = ThermodynamicState1D(pressure, rho, velocity, gamma)
+                state = ThermodynamicState1D(pressure, rho, velocity, gamma, mass_ratio)
             else:
-                total_density_flux = (self.density_fluxes[i] - self.density_fluxes[i + 1]) * dt / self.dx
+                total_density_flux = (self.density_fluxes[i] * self.mass_ratio_fluxes[i, :] - self.density_fluxes[i + 1] * self.mass_ratio_fluxes[i + 1, :])
+                total_density_flux *= dt / self.dx
                 total_momentum_flux = (self.momentum_fluxes[i] - self.momentum_fluxes[i + 1]) * dt / self.dx
                 total_energy_flux = (self.total_energy_fluxes[i] - self.total_energy_fluxes[i + 1]) * dt / self.dx
 
-                state = ThermodynamicState1D(self.pressures[i], self.densities[i], self.velocities[i], self.gamma[i])
+                state = ThermodynamicState1D(self.pressures[i], self.densities[i], self.velocities[i], self.gamma[i], self.mass_ratios[i, :])
                 state.update_states(total_density_flux, total_momentum_flux, total_energy_flux)
 
             self.densities[i] = state.rho
             self.pressures[i] = state.p
             self.velocities[i] = state.u
             self.internal_energies[i] = state.e_int
+            self.kinetic_energies[i] = state.e_kin
+            self.gamma[i] = state.gamma
+            self.mass_ratios[i, :] = state.mass_ratios
 
     def run_sim(self):
         """
@@ -276,7 +300,7 @@ class Controller1D(ControllerND):
             times.append(t)
             print("Step " + str(ts) + ": " + str(dt))
 
-        return times, self.x, self.densities, self.pressures, self.velocities, self.internal_energies
+        return times, self.x, self.densities, self.pressures, self.velocities, self.internal_energies, self.kinetic_energies, self.mass_ratios
 
 
 class Controller2D(ControllerND):

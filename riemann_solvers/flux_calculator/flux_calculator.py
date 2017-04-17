@@ -26,13 +26,14 @@ class FluxCalculator1D(FluxCalculatorND):
         pass
     
     @staticmethod
-    def calculate_godunov_fluxes(densities, pressures, velocities, gamma):
+    def calculate_godunov_fluxes(densities, pressures, velocities, gamma, mass_ratios):
         """
         Function used to calculate fluxes for a 1D simulation using Godunov's scheme as in Toro Chapter 6
         """
         density_fluxes = np.zeros(len(densities) - 1)
         momentum_fluxes = np.zeros(len(densities) - 1)
         total_energy_fluxes = np.zeros(len(densities) - 1)
+        mass_ratio_fluxes = np.zeros((len(densities) - 1, mass_ratios.shape[1]))
 
         for i, dens_flux in enumerate(density_fluxes):
             solver = IterativeRiemannSolver()
@@ -49,15 +50,16 @@ class FluxCalculator1D(FluxCalculatorND):
 
             # Store fluxes in array
             flux_gamma = left_state.gamma if is_left else right_state.gamma
+            mass_ratio_fluxes[i, :] = mass_ratios[i, :] if is_left else mass_ratios[i + 1, :]
             density_fluxes[i] = rho_flux * u_flux
             momentum_fluxes[i] = rho_flux * u_flux * u_flux + p_flux
             e_tot = p_flux / (flux_gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
             total_energy_fluxes[i] = (p_flux + e_tot) * u_flux
 
-        return density_fluxes, momentum_fluxes, total_energy_fluxes
+        return density_fluxes, momentum_fluxes, total_energy_fluxes, mass_ratio_fluxes
 
     @staticmethod
-    def calculate_muscl_fluxes(densities, pressures, velocities, gamma, dt_over_dx):
+    def calculate_muscl_fluxes(densities, pressures, velocities, gamma, mass_ratios, dt_over_dx):
         """
         Function used to calculate fluxes for a 1D simulation using a MUSCL Hancock Scheme - Toro 14.4
         """
@@ -120,7 +122,7 @@ class FluxCalculator1D(FluxCalculatorND):
             half_step_momentum_flux = (left_momentum_flux - right_momentum_flux) * dt_over_dx * 0.5
             half_step_energy_flux = (left_energy_flux - right_energy_flux) * dt_over_dx * 0.5
 
-            state = ThermodynamicState1D(left_pressure, left_density, left_velocity, gamma[idx])
+            state = ThermodynamicState1D(left_pressure, left_density, left_velocity, gamma[idx], mass_ratios[idx])
             state.update_states(half_step_density_flux,
                                 half_step_momentum_flux,
                                 half_step_energy_flux)
@@ -128,7 +130,7 @@ class FluxCalculator1D(FluxCalculatorND):
             half_step_velocities_L[i] = state.u
             half_step_pressures_L[i] = state.p
 
-            state = ThermodynamicState1D(right_pressure, right_density, right_velocity, gamma[idx])
+            state = ThermodynamicState1D(right_pressure, right_density, right_velocity, gamma[idx], mass_ratios[idx])
             state.update_states(half_step_density_flux,
                                 half_step_momentum_flux,
                                 half_step_energy_flux)
@@ -140,6 +142,7 @@ class FluxCalculator1D(FluxCalculatorND):
         density_fluxes = np.zeros(len(half_step_densities_R) - 1)
         momentum_fluxes = np.zeros(len(half_step_densities_R) - 1)
         total_energy_fluxes = np.zeros(len(half_step_densities_R) - 1)
+        mass_ratio_fluxes = np.zeros((len(half_step_densities_R) - 1, mass_ratios.shape[1]))
 
         for i, dens_flux in enumerate(density_fluxes):
             solver = IterativeRiemannSolver()
@@ -161,22 +164,24 @@ class FluxCalculator1D(FluxCalculatorND):
             p_flux, u_flux, rho_flux, is_left = solver.sample(0.0, left_state, right_state, p_star, u_star)
 
             # Store fluxes in array
+            mass_ratio_fluxes[i, :] = mass_ratios[i, :] if is_left else mass_ratios[i + 1, :]
             flux_gamma = left_state.gamma if is_left else right_state.gamma
             density_fluxes[i] = rho_flux * u_flux
             momentum_fluxes[i] = rho_flux * u_flux * u_flux + p_flux
             e_tot = p_flux / (flux_gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
             total_energy_fluxes[i] = (p_flux + e_tot) * u_flux
 
-        return density_fluxes, momentum_fluxes, total_energy_fluxes
+        return density_fluxes, momentum_fluxes, total_energy_fluxes, mass_ratio_fluxes
 
     @staticmethod
-    def calculate_hllc_fluxes(densities, pressures, velocities, gamma):
+    def calculate_hllc_fluxes(densities, pressures, velocities, gamma, mass_ratios):
         """
         Calculated the fluxes bases on the HLLC approximate Riemann solver
         """
         density_fluxes = np.zeros(len(densities) - 1)
         momentum_fluxes = np.zeros(len(densities) - 1)
         total_energy_fluxes = np.zeros(len(densities) - 1)
+        mass_ratio_fluxes = np.ones((len(densities) - 1, mass_ratios.shape[1]))
 
         for i, dens_flux in enumerate(density_fluxes):
             solver = HLLCRiemannSolver(gamma[i + 1])
@@ -186,17 +191,18 @@ class FluxCalculator1D(FluxCalculatorND):
 
             density_fluxes[i], momentum_fluxes[i], total_energy_fluxes[i] = solver.evaluate_flux(left_state, right_state)
 
-        return density_fluxes, momentum_fluxes, total_energy_fluxes
+        return density_fluxes, momentum_fluxes, total_energy_fluxes, mass_ratio_fluxes
 
 
     @staticmethod
-    def calculate_random_choice_fluxes(densities, pressures, velocities, gamma, ts, dx_over_dt):
+    def calculate_random_choice_fluxes(densities, pressures, velocities, gamma, mass_ratios, ts, dx_over_dt):
         """
         Function used to calculate states for a 1D simulation using Glimm's random choice scheme as in Toro Chapter 7
         """
         density_fluxes = np.zeros(len(densities) - 1)
         momentum_fluxes = np.zeros(len(densities) - 1)
         total_energy_fluxes = np.zeros(len(densities) - 1)
+        mass_ratio_fluxes = np.zeros((len(densities) - 1, mass_ratios.shape[1]))
 
         theta = VanDerCorput.calculate_theta(ts, 2, 1)
         for i in range(len(densities) - 2):
@@ -220,12 +226,17 @@ class FluxCalculator1D(FluxCalculatorND):
                                                                   p_star_right, u_star_right)
 
             # Store fluxes in array
-            flux_gamma = left_state.gamma if is_left else right_state.gamma
+            if theta <= 0.5:
+                flux_gamma = left_state.gamma if is_left else mid_state.gamma
+                mass_ratio_fluxes[i] = mass_ratios[i] if is_left else mass_ratios[i + 1]
+            else:
+                flux_gamma = mid_state.gamma if is_left else right_state.gamma
+                mass_ratio_fluxes[i] = mass_ratios[i + 1] if is_left else mass_ratios[i + 2]
             density_fluxes[i] = rho_flux
             momentum_fluxes[i] = rho_flux * u_flux
             total_energy_fluxes[i] = p_flux / (flux_gamma - 1) + 0.5 * rho_flux * u_flux * u_flux
 
-        return density_fluxes, momentum_fluxes, total_energy_fluxes
+        return density_fluxes, momentum_fluxes, total_energy_fluxes, mass_ratio_fluxes
 
 
 class FluxCalculator2D(FluxCalculatorND):

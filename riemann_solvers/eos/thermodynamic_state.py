@@ -22,7 +22,7 @@ class ThermodynamicState1D(object):
         self.u = velocity
 
         self.mom = self.u * self.rho
-        self.e_kin = 0.5 * self.rho * self.u * self.u
+        self.e_kin = 0.5 * self.u * self.u
         self.e_int = pressure / (self.rho * (gamma - 1))
 
         self.mass_ratios = mass_ratios
@@ -38,20 +38,26 @@ class ThermodynamicState1D(object):
         :param momentum_flux
         :param e_flux
         """
-        assert(isinstance(density_flux, float))
-        assert(isinstance(momentum_flux, float))
-        assert(isinstance(e_flux, float))
+        assert isinstance(density_flux, float) or isinstance(density_flux, np.ndarray)
+        assert isinstance(momentum_flux, float)
+        assert isinstance(e_flux, float)
 
-        e_tot_initial = self.rho * self.e_int + self.e_kin + e_flux
+        e_tot_initial = self.rho * (self.e_int + self.e_kin) + e_flux
 
-        self.rho += density_flux
+        # Get new mass ratio
+        self.mass_ratios = self.mass_ratios * self.rho + density_flux
+        self.mass_ratios = self.mass_ratios / self.mass_ratios.sum()
+        assert np.isclose(self.mass_ratios.sum(), 1.0, 1e-14), self.mass_ratios
+        for mass in self.mass_ratios:
+            assert mass >= 0.0 or np.isclose(mass, 0.0, 1e-14)
+            assert mass <= 1.0 or np.isclose(mass, 1.0, 1e-14)
+
+        # Get new eos states
+        self.rho += density_flux.sum()
         self.mom += momentum_flux
-
         self.u = self.mom / self.rho
-
-        self.e_kin = 0.5 * self.rho * self.u ** 2
-        self.e_int = (e_tot_initial - self.e_kin) / self.rho
-
+        self.e_kin = 0.5 * self.u ** 2
+        self.e_int = e_tot_initial / self.rho - self.e_kin
         self.p = self.rho * self.e_int * (self.gamma - 1)
 
 
@@ -71,7 +77,7 @@ class ThermodynamicState2D(object):
 
         self.mom_x = self.u * self.rho
         self.mom_y = self.v * self.rho
-        self.e_kin = 0.5 * self.rho * self.u * self.u + 0.5 * self.rho * self.v * self.v
+        self.e_kin = 0.5 * self.u * self.u + 0.5 * self.v * self.v
         self.e_int = pressure / (self.rho * (gamma - 1))
 
     def sound_speed(self):
@@ -91,7 +97,7 @@ class ThermodynamicState2D(object):
         assert(isinstance(momentum_flux_y, float))
         assert(isinstance(e_flux, float))
 
-        e_tot_initial = self.rho * self.e_int + self.e_kin + e_flux
+        e_tot_initial = self.rho * (self.e_int + self.e_kin) + e_flux
 
         self.rho += density_flux
         self.mom_x += momentum_flux_x
@@ -100,7 +106,7 @@ class ThermodynamicState2D(object):
         self.u = self.mom_x / self.rho
         self.v = self.mom_y / self.rho
 
-        self.e_kin = 0.5 * self.rho * self.u ** 2 + 0.5 * self.rho * self.v ** 2
-        self.e_int = (e_tot_initial - self.e_kin) / self.rho
+        self.e_kin = 0.5 * self.u ** 2 + 0.5 * self.v ** 2
+        self.e_int = e_tot_initial / self.rho - self.e_kin
 
         self.p = self.rho * self.e_int * (self.gamma - 1)

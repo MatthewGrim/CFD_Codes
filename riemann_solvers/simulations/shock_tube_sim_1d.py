@@ -92,8 +92,8 @@ def example():
     run_god = True
     run_rc = False
     run_hllc = False
-    run_muscl = True
-    for i in range(1, 2):
+    run_muscl = False
+    for i in range(0, 5):
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 
@@ -102,37 +102,37 @@ def example():
                                          final_time=end_times[i], CFL=0.45,
                                          flux_calculator=FluxCalculator1D.GODUNOV)
             godunov_sim = Controller1D(shock_tube_god)
-            (times_god, x_god, densities_god, pressures_god, velocities_god, internal_energies_god) = godunov_sim.run_sim()
+            (times_god, x_god, densities_god, pressures_god, velocities_god, internal_energies_god, kinetic_energies_god, mass_ratios_god) = godunov_sim.run_sim()
 
         if run_rc:
             shock_tube_rc = ShockTube1D(left_state, right_state, membrane_location[i],
                                         final_time=end_times[i], CFL=0.45,
                                         flux_calculator=FluxCalculator1D.RANDOM_CHOICE)
             random_choice_sim = Controller1D(shock_tube_rc)
-            (times_rc, x_rc, densities_rc, pressures_rc, velocities_rc, internal_energies_rc) = random_choice_sim.run_sim()
+            (times_rc, x_rc, densities_rc, pressures_rc, velocities_rc, internal_energies_rc, kinetic_energies_rc,  mass_ratios_rc) = random_choice_sim.run_sim()
 
         if run_hllc:
             shock_tube_hllc = ShockTube1D(left_state, right_state, membrane_location[i],
                                           final_time=end_times[i], CFL=0.45,
                                           flux_calculator=FluxCalculator1D.HLLC)
             hllc_sim = Controller1D(shock_tube_hllc)
-            (times_hllc, x_hllc, densities_hllc, pressures_hllc, velocities_hllc, internal_energies_hllc) = hllc_sim.run_sim()
+            (times_hllc, x_hllc, densities_hllc, pressures_hllc, velocities_hllc, internal_energies_hllc, kinetic_energies_hllc,  mass_ratios_hllc) = hllc_sim.run_sim()
 
         if run_muscl:
             shock_tube_muscl = ShockTube1D(left_state, right_state, membrane_location[i],
                                           final_time=end_times[i], CFL=0.45,
                                           flux_calculator=FluxCalculator1D.MUSCL)
             muscl_sim = Controller1D(shock_tube_muscl)
-            (times_muscl, x_muscl, densities_muscl, pressures_muscl, velocities_muscl, internal_energies_muscl) = muscl_sim.run_sim()
+            (times_muscl, x_muscl, densities_muscl, pressures_muscl, velocities_muscl, internal_energies_muscl, kinetic_energies_muscl, mass_ratios_muscl) = muscl_sim.run_sim()
 
         # Get analytic solution
         sod_test = AnalyticShockTube(left_state, right_state, membrane_location[i], 1000)
-        x_sol, rho_sol, u_sol, p_sol, e_sol = sod_test.get_solution(end_times[i], membrane_location[i])
+        x_sol, rho_sol, u_sol, p_sol, e_int_sol, e_kin_sol = sod_test.get_solution(end_times[i], membrane_location[i])
 
-        # Plot results
+        # Plot state results
         title = "Sod Test: {}".format(i + 1)
         num_plts_x = 2
-        num_plts_y = 2
+        num_plts_y = 3
         plt.figure(figsize=(20, 10))
         plt.suptitle(title)
         plt.subplot(num_plts_x, num_plts_y, 1)
@@ -173,7 +173,7 @@ def example():
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 4)
         plt.title("Internal Energy")
-        plt.plot(x_sol, e_sol)
+        plt.plot(x_sol, e_int_sol)
         if run_god:
             plt.scatter(x_god, internal_energies_god, c='g')
         if run_rc:
@@ -183,6 +183,30 @@ def example():
         if run_muscl:
             plt.scatter(x_muscl, internal_energies_muscl, c='c')
         plt.xlim([0.0, 1.0])
+        plt.subplot(num_plts_x, num_plts_y, 5)
+        plt.title("Kinetic Energy")
+        plt.plot(x_sol, e_kin_sol)
+        if run_god:
+            plt.scatter(x_god, kinetic_energies_god, c='g')
+        if run_rc:
+            plt.scatter(x_rc, kinetic_energies_rc, c='r')
+        if run_hllc:
+            plt.scatter(x_hllc, kinetic_energies_hllc, c='k')
+        if run_muscl:
+            plt.scatter(x_muscl, kinetic_energies_muscl, c='c')
+        plt.xlim([0.0, 1.0])
+        plt.subplot(num_plts_x, num_plts_y, 6)
+        plt.title("Mass Ratios")
+        if run_god:
+            plt.plot(x_god, mass_ratios_god, c='g')
+        if run_rc:
+            plt.plot(x_rc, mass_ratios_rc, c='r')
+        if run_hllc:
+            plt.plot(x_hllc, mass_ratios_hllc, c='k')
+        if run_muscl:
+            plt.plot(x_muscl, mass_ratios_muscl, c='c')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
         plt.show()
 
 

@@ -323,8 +323,9 @@ class HLLCRiemannSolver(BaseRiemannSolver):
             rho_flux = left.u * left.rho
             mom_flux = rho_flux * left.u + left.p
             energy_flux = (left.p / (left.gamma - 1) + 0.5 * rho_flux * left.u + left.p) * left.u
+            mass_ratio_flux = left.mass_ratios
             if 0 < S_L:
-                return rho_flux, mom_flux, energy_flux
+                return rho_flux, mom_flux, energy_flux, mass_ratio_flux
             else:
                 flux_coeff_1 = S_Star / (S_L - S_Star)
                 flux_coeff_2 = S_L / (S_L - S_Star) * (left.p + left.rho * (S_L - left.u) * (S_Star - left.u))
@@ -333,13 +334,14 @@ class HLLCRiemannSolver(BaseRiemannSolver):
                 mom_flux = flux_coeff_1 * (S_L * left.u * left.rho - mom_flux) + flux_coeff_2
                 energy_flux = flux_coeff_1 * (S_L * (left.e_int * left.rho + left.e_kin) - energy_flux) + flux_coeff_2 * S_Star
 
-                return rho_flux, mom_flux, energy_flux
+                return rho_flux, mom_flux, energy_flux, mass_ratio_flux
         else:
             rho_flux = right.u * right.rho
             mom_flux = rho_flux * right.u + right.p
             energy_flux = (right.p / (right.gamma - 1) + 0.5 * rho_flux * right.u + right.p) * right.u
+            mass_ratio_flux = right.mass_ratios
             if S_R <= 0:
-                return rho_flux, mom_flux, energy_flux
+                return rho_flux, mom_flux, energy_flux, mass_ratio_flux
             else:
                 flux_coeff_1 = S_Star / (S_R - S_Star)
                 flux_coeff_2 = S_R / (S_R - S_Star) * (right.p + right.rho * (S_R - right.u) * (S_Star - right.u))
@@ -348,7 +350,7 @@ class HLLCRiemannSolver(BaseRiemannSolver):
                 mom_flux = flux_coeff_1 * (S_R * right.u * right.rho - mom_flux) + flux_coeff_2
                 energy_flux = flux_coeff_1 * (S_R * (right.e_int * right.rho + right.e_kin) - energy_flux) + flux_coeff_2 * S_Star
 
-                return rho_flux, mom_flux, energy_flux
+                return rho_flux, mom_flux, energy_flux, mass_ratio_flux
 
     def evaluate_flux(self, left, right):
         """

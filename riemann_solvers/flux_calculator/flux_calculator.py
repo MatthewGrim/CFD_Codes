@@ -186,10 +186,10 @@ class FluxCalculator1D(FluxCalculatorND):
         for i, dens_flux in enumerate(density_fluxes):
             solver = HLLCRiemannSolver(gamma[i + 1])
             # Generate left and right states from cell averaged values
-            left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma[i])
-            right_state = ThermodynamicState1D(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma[i + 1])
+            left_state = ThermodynamicState1D(pressures[i], densities[i], velocities[i], gamma[i], mass_ratios=mass_ratios[i])
+            right_state = ThermodynamicState1D(pressures[i + 1], densities[i + 1], velocities[i + 1], gamma[i + 1], mass_ratios=mass_ratios[i + 1])
 
-            density_fluxes[i], momentum_fluxes[i], total_energy_fluxes[i] = solver.evaluate_flux(left_state, right_state)
+            density_fluxes[i], momentum_fluxes[i], total_energy_fluxes[i], mass_ratio_fluxes[i, :] = solver.evaluate_flux(left_state, right_state)
 
         return density_fluxes, momentum_fluxes, total_energy_fluxes, mass_ratio_fluxes
 

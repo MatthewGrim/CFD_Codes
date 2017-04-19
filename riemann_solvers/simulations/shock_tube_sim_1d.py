@@ -91,7 +91,7 @@ def example():
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
     run_god = True
-    run_rc = False
+    run_rc = True
     run_hllc = True
     run_muscl = False
     for i in range(0, 5):
@@ -173,7 +173,7 @@ def example():
             plt.scatter(x_muscl, pressures_muscl, c='c')
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 4)
-        plt.title("Internal Energy")
+        plt.title("Specific Internal Energy")
         plt.plot(x_sol, e_int_sol)
         if run_god:
             plt.scatter(x_god, internal_energies_god, c='g')
@@ -185,16 +185,16 @@ def example():
             plt.scatter(x_muscl, internal_energies_muscl, c='c')
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 5)
-        plt.title("Kinetic Energy")
+        plt.title("Specific Kinetic Energy")
         plt.plot(x_sol, e_kin_sol)
         if run_god:
-            plt.scatter(x_god, kinetic_energies_god, c='g')
+            plt.scatter(x_god, kinetic_energies_god / densities_god, c='g')
         if run_rc:
-            plt.scatter(x_rc, kinetic_energies_rc, c='r')
+            plt.scatter(x_rc, kinetic_energies_rc / densities_rc, c='r')
         if run_hllc:
-            plt.scatter(x_hllc, kinetic_energies_hllc, c='k')
+            plt.scatter(x_hllc, kinetic_energies_hllc / densities_hllc, c='k')
         if run_muscl:
-            plt.scatter(x_muscl, kinetic_energies_muscl, c='c')
+            plt.scatter(x_muscl, kinetic_energies_muscl / densities_muscl, c='c')
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 6)
         plt.title("Mass Ratios")

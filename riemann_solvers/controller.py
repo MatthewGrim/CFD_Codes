@@ -215,6 +215,8 @@ class Controller1D(ControllerND):
                                                                               self.velocities,
                                                                               self.gamma,
                                                                               self.mass_ratios,
+                                                                              self.specific_heats,
+                                                                              self.molar_masses,
                                                                               dt_over_dx)
         else:
             raise RuntimeError("Flux calculator does not exist")

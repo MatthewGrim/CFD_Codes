@@ -59,7 +59,8 @@ class FluxCalculator1D(FluxCalculatorND):
         return density_fluxes, momentum_fluxes, total_energy_fluxes, mass_ratio_fluxes
 
     @staticmethod
-    def calculate_muscl_fluxes(densities, pressures, velocities, gamma, mass_ratios, dt_over_dx):
+    def calculate_muscl_fluxes(densities, pressures, velocities, gamma,
+                               mass_ratios, specific_heats, molar_masses, dt_over_dx):
         """
         Function used to calculate fluxes for a 1D simulation using a MUSCL Hancock Scheme - Toro 14.4
         """
@@ -125,7 +126,8 @@ class FluxCalculator1D(FluxCalculatorND):
             state = ThermodynamicState1D(left_pressure, left_density, left_velocity, gamma[idx], mass_ratios[idx])
             state.update_states(half_step_density_flux,
                                 half_step_momentum_flux,
-                                half_step_energy_flux)
+                                half_step_energy_flux,
+                                specific_heats, molar_masses)
             half_step_densities_L[i] = state.rho
             half_step_velocities_L[i] = state.u
             half_step_pressures_L[i] = state.p
@@ -133,7 +135,8 @@ class FluxCalculator1D(FluxCalculatorND):
             state = ThermodynamicState1D(right_pressure, right_density, right_velocity, gamma[idx], mass_ratios[idx])
             state.update_states(half_step_density_flux,
                                 half_step_momentum_flux,
-                                half_step_energy_flux)
+                                half_step_energy_flux,
+                                specific_heats, molar_masses)
             half_step_densities_R[i] = state.rho
             half_step_velocities_R[i] = state.u
             half_step_pressures_R[i] = state.p

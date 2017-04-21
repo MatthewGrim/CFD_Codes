@@ -65,13 +65,15 @@ class FluxCalculator1D(FluxCalculatorND):
         Function used to calculate fluxes for a 1D simulation using a MUSCL Hancock Scheme - Toro 14.4
         """
         # Get half step densities
-        limiter = SuperBeeLimiter()
+        limiter = UltraBeeLimiter()
         half_step_densities_L = np.zeros(len(densities) - 2)
-        half_step_velocities_L = np.zeros(len(densities) - 2)
-        half_step_pressures_L = np.zeros(len(densities) - 2)
-        half_step_densities_R = np.zeros(len(densities) - 2)
-        half_step_velocities_R = np.zeros(len(densities) - 2)
-        half_step_pressures_R = np.zeros(len(densities) - 2)
+        half_step_velocities_L = np.zeros(half_step_densities_L.shape)
+        half_step_pressures_L = np.zeros(half_step_densities_L.shape)
+        half_step_mass_ratios_L = np.zeros((len(densities) - 2, len(specific_heats)))
+        half_step_densities_R = np.zeros(half_step_densities_L.shape)
+        half_step_velocities_R = np.zeros(half_step_densities_L.shape)
+        half_step_pressures_R = np.zeros(half_step_densities_L.shape)
+        half_step_mass_ratios_R = np.zeros(half_step_mass_ratios_L.shape)
         for i, dens in enumerate(half_step_densities_L):
             idx = i + 1
 
@@ -95,14 +97,18 @@ class FluxCalculator1D(FluxCalculatorND):
             left_density = densities[idx] - average_density_slope
             left_momentum = densities[idx] * velocities[idx] - average_momentum_slope
             left_energy = cell_energy - average_energy_slope
+            left_mass_ratios = mass_ratios[idx, :]
             assert left_density > 0, left_density
             assert left_energy > 0, left_energy
+            assert np.isclose(1.0, left_mass_ratios.sum(), 1e-14)
 
             right_density = densities[idx] + average_density_slope
             right_momentum = densities[idx] * velocities[idx] + average_momentum_slope
             right_energy = cell_energy + average_energy_slope
+            right_mass_ratios = mass_ratios[idx, :]
             assert right_density > 0, right_density
             assert right_energy > 0, right_energy
+            assert np.isclose(1.0, right_mass_ratios.sum(), 1e-14)
 
             # Perform half step flux
             left_velocity = left_momentum / left_density
@@ -123,7 +129,7 @@ class FluxCalculator1D(FluxCalculatorND):
             half_step_momentum_flux = (left_momentum_flux - right_momentum_flux) * dt_over_dx * 0.5
             half_step_energy_flux = (left_energy_flux - right_energy_flux) * dt_over_dx * 0.5
 
-            state = ThermodynamicState1D(left_pressure, left_density, left_velocity, gamma[idx], mass_ratios[idx])
+            state = ThermodynamicState1D(left_pressure, left_density, left_velocity, gamma[idx], left_mass_ratios)
             state.update_states(half_step_density_flux,
                                 half_step_momentum_flux,
                                 half_step_energy_flux,
@@ -131,8 +137,9 @@ class FluxCalculator1D(FluxCalculatorND):
             half_step_densities_L[i] = state.rho
             half_step_velocities_L[i] = state.u
             half_step_pressures_L[i] = state.p
+            half_step_mass_ratios_L[i, :] = state.mass_ratios
 
-            state = ThermodynamicState1D(right_pressure, right_density, right_velocity, gamma[idx], mass_ratios[idx])
+            state = ThermodynamicState1D(right_pressure, right_density, right_velocity, gamma[idx], right_mass_ratios)
             state.update_states(half_step_density_flux,
                                 half_step_momentum_flux,
                                 half_step_energy_flux,
@@ -140,6 +147,7 @@ class FluxCalculator1D(FluxCalculatorND):
             half_step_densities_R[i] = state.rho
             half_step_velocities_R[i] = state.u
             half_step_pressures_R[i] = state.p
+            half_step_mass_ratios_R[i, :] = state.mass_ratios
 
         # Calculate final fluxes
         density_fluxes = np.zeros(len(half_step_densities_R) - 1)
@@ -154,11 +162,13 @@ class FluxCalculator1D(FluxCalculatorND):
             left_state = ThermodynamicState1D(half_step_pressures_R[i],
                                               half_step_densities_R[i],
                                               half_step_velocities_R[i],
-                                              gamma[i])
+                                              gamma[i],
+                                              half_step_mass_ratios_L[i, :])
             right_state = ThermodynamicState1D(half_step_pressures_L[i + 1],
                                                half_step_densities_L[i + 1],
                                                half_step_velocities_L[i + 1],
-                                               gamma[i + 1])
+                                               gamma[i + 1],
+                                               half_step_mass_ratios_R[i + 1, :])
 
             # Solve Riemann problem for star states
             p_star, u_star = solver.get_star_states(left_state, right_state)
@@ -167,7 +177,7 @@ class FluxCalculator1D(FluxCalculatorND):
             p_flux, u_flux, rho_flux, is_left = solver.sample(0.0, left_state, right_state, p_star, u_star)
 
             # Store fluxes in array
-            mass_ratio_fluxes[i, :] = mass_ratios[i, :] if is_left else mass_ratios[i + 1, :]
+            mass_ratio_fluxes[i, :] = left_state.mass_ratios if is_left else right_state.mass_ratios
             flux_gamma = left_state.gamma if is_left else right_state.gamma
             density_fluxes[i] = rho_flux * u_flux
             momentum_fluxes[i] = rho_flux * u_flux * u_flux + p_flux

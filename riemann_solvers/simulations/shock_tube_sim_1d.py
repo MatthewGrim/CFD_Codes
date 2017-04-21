@@ -93,7 +93,7 @@ def example():
     run_god = True
     run_rc = True
     run_hllc = True
-    run_muscl = False
+    run_muscl = True
     for i in range(0, 5):
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)

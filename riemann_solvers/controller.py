@@ -305,39 +305,6 @@ class Controller1D(ControllerND):
             times.append(t)
             print("Step " + str(ts) + ": " + str(dt))
 
-
-            # if ts % 25 == 0:
-            #     title = "Sod Test: {}".format(ts)
-            #     num_plts_x = 2
-            #     num_plts_y = 3
-            #     plt.figure(figsize=(20, 10))
-            #     plt.suptitle(title)
-            #     plt.subplot(num_plts_x, num_plts_y, 1)
-            #     plt.title("Density")
-            #     plt.scatter(self.x, self.densities, c='g')
-            #     plt.xlim([0.0, 1.0])
-            #     plt.subplot(num_plts_x, num_plts_y, 2)
-            #     plt.title("Velocity")
-            #     plt.scatter(self.x, self.velocities, c='g')
-            #     plt.xlim([0.0, 1.0])
-            #     plt.subplot(num_plts_x, num_plts_y, 3)
-            #     plt.title("Pressure")
-            #     plt.scatter(self.x, self.pressures, c='g')
-            #     plt.xlim([0.0, 1.0])
-            #     plt.subplot(num_plts_x, num_plts_y, 4)
-            #     plt.title("Internal Energy")
-            #     plt.scatter(self.x, self.internal_energies, c='g')
-            #     plt.xlim([0.0, 1.0])
-            #     plt.subplot(num_plts_x, num_plts_y, 5)
-            #     plt.title("Kinetic Energy")
-            #     plt.scatter(self.x, self.kinetic_energies, c='g')
-            #     plt.xlim([0.0, 1.0])
-            #     plt.subplot(num_plts_x, num_plts_y, 6)
-            #     plt.title("Mass Ratios")
-            #     plt.plot(self.x, self.mass_ratios, c='g')
-            #     plt.xlim([0.0, 1.0])
-            #     plt.show()
-
         return times, self.x, self.densities, self.pressures, self.velocities, self.internal_energies, self.kinetic_energies, self.mass_ratios
 
 

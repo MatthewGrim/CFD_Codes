@@ -54,9 +54,12 @@ class ThermodynamicState1D(object):
         self.mass_ratios = self.mass_ratios * self.rho + density_flux
         self.mass_ratios = self.mass_ratios / self.mass_ratios.sum()
         assert np.isclose(self.mass_ratios.sum(), 1.0, 1e-14), self.mass_ratios
-        for mass in self.mass_ratios:
-            assert mass >= 0.0 or np.isclose(mass, 0.0, 1e-14)
-            assert mass <= 1.0 or np.isclose(mass, 1.0, 1e-14)
+        # Simple mass ratio fix to stop out of bounds oscillations in MUSCL
+        for i, mass in enumerate(self.mass_ratios):
+            if mass < 0.0:
+                self.mass_ratios[i] = 0.0
+            if mass > 1.0:
+                self.mass_ratios[i] = 1.0
 
         # Update gamma
         moles = self.mass_ratios / molar_masses

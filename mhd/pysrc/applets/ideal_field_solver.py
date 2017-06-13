@@ -41,14 +41,22 @@ def solve_field(particle, B):
     """
     Solve for the velocity function with respect to time
     """
-    assert isinstance(B, np.ndarray) and B.shape[0] == 3 and len(B.shape) == 1, \
-            "B must be a 3D vector"
+    assert isinstance(B, np.ndarray) and B.shape[0] == 3 and len(B.shape) == 1, "B must be a 3D vector"
     v = particle.velocity
     omega = particle.charge * magnitude(B) / particle.mass
     v_parallel = vector_projection(v, B)
     v_perpendicular = v - v_parallel
 
     F = cross(v_perpendicular, B) * particle.charge
+    radius = magnitude(F) / (particle.mass * dot(v_perpendicular, v_perpendicular))
+    centre_of_rotation = F * radius / magnitude(F) + particle.position
+
+    def parallel_motion(t):
+        return v_parallel * t
+
+    def perpendicular_motion(t):
+        angle = omega * t
+        return rotate_3d()
 
 
 if __name__ == '__main__':

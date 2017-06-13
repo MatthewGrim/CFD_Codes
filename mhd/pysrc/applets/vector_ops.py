@@ -96,4 +96,9 @@ def rotate_3d(vector, rotation_angles):
                    [c_y * s_z, c_x * c_z + s_x * s_y * s_z, -c_z * s_x + c_x * s_y * s_z],
                    [-s_y, c_y * s_x, c_x * c_y]])
 
-    return R.dot(vector)
+    rotated_vector = np.zeros(3)
+    rotated_vector[0] = R[0, 0] * vector[0] + R[0, 1] * vector[1] + R[0, 2] * vector[2]
+    rotated_vector[1] = R[1, 0] * vector[0] + R[1, 1] * vector[1] + R[1, 2] * vector[2]
+    rotated_vector[2] = R[2, 0] * vector[0] + R[2, 1] * vector[1] + R[2, 2] * vector[2]
+
+    return rotated_vector

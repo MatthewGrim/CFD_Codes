@@ -54,6 +54,7 @@ class VectorOpsTest(unittest.TestCase):
         self.assertAlmostEqual(-1.0, res_3[1])
 
     def test_rotate_3d(self):
+        # X Axis
         vector = np.asarray([1.0, 0.0, 0.0])
         res_1 = rotate_3d(vector, np.asarray([np.pi / 2.0, 0.0, 0.0]))
         self.assertAlmostEqual(1.0, res_1[0])
@@ -70,6 +71,7 @@ class VectorOpsTest(unittest.TestCase):
         self.assertAlmostEqual(1.0, res_3[1])
         self.assertAlmostEqual(0.0, res_3[2])
 
+        # Y Axis
         vector = np.asarray([0.0, 1.0, 0.0])
         res_1 = rotate_3d(vector, np.asarray([np.pi / 2.0, 0.0, 0.0]))
         self.assertAlmostEqual(0.0, res_1[0])
@@ -85,6 +87,23 @@ class VectorOpsTest(unittest.TestCase):
         self.assertAlmostEqual(-1.0, res_3[0])
         self.assertAlmostEqual(0.0, res_3[1])
         self.assertAlmostEqual(0.0, res_3[2])
+
+        # Z Axis
+        vector = np.asarray([0.0, 0.0, 1.0])
+        res_1 = rotate_3d(vector, np.asarray([np.pi / 2.0, 0.0, 0.0]))
+        self.assertAlmostEqual(0.0, res_1[0])
+        self.assertAlmostEqual(-1.0, res_1[1])
+        self.assertAlmostEqual(0.0, res_1[2])
+
+        res_2 = rotate_3d(vector, np.asarray([0.0, np.pi / 2.0, 0.0]))
+        self.assertAlmostEqual(1.0, res_2[0])
+        self.assertAlmostEqual(0.0, res_2[1])
+        self.assertAlmostEqual(0.0, res_2[2])
+
+        res_3 = rotate_3d(vector, np.asarray([0.0, 0.0, np.pi / 2.0]))
+        self.assertAlmostEqual(0.0, res_3[0])
+        self.assertAlmostEqual(0.0, res_3[1])
+        self.assertAlmostEqual(1.0, res_3[2])
 
 
 if __name__ == '__main__':

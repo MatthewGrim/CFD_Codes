@@ -37,9 +37,9 @@ class ShockTube1D(BaseSimulation1D):
         self.flux_calculator = flux_calculator
 
         # Initialise physical states
-        self.number_of_fluids = 2
-        self.molar_masses = np.asarray([29.0, 29.0])
-        self.specific_heats = np.asarray([2.5, 2.5])
+        self.number_of_fluids = 1
+        self.molar_masses = np.asarray([29.0])
+        self.specific_heats = np.asarray([2.5])
         self.densities = list()
         self.pressures = list()
         self.vel_x = list()
@@ -54,14 +54,12 @@ class ShockTube1D(BaseSimulation1D):
                 self.vel_x.append(left_state.u)
                 self.internal_energies.append(left_state.e_int)
                 self.mass_ratios[i, 0] = 1.0
-                self.mass_ratios[i, 1] = 0.0
             else:
                 self.densities.append(right_state.rho)
                 self.pressures.append(right_state.p)
                 self.vel_x.append(right_state.u)
                 self.internal_energies.append(right_state.e_int)
-                self.mass_ratios[i, 0] = 0.0
-                self.mass_ratios[i, 1] = 1.0
+                self.mass_ratios[i, 0] = 1.0
         self.densities = np.asarray(self.densities)
         self.pressures = np.asarray(self.pressures)
         self.vel_x = np.asarray(self.vel_x)
@@ -90,11 +88,11 @@ def example():
     membrane_location = [0.3, 0.5, 0.5, 0.4, 0.8]
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
-    run_god = True
-    run_rc = True
+    run_god = False
+    run_rc = False
     run_hllc = True
-    run_muscl = True
-    for i in range(0, 5):
+    run_muscl = False
+    for i in range(1, 5):
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 

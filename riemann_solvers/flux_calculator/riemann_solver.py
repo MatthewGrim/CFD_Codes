@@ -298,6 +298,15 @@ class HLLCRiemannSolver(BaseRiemannSolver):
         self.gamma = gamma
         super(HLLCRiemannSolver, self).__init__()
 
+    def __evaluate_S_star(self, left, right, S_L, S_R):
+        """
+        Function to evaluate the contact velocity S_Star based on the estimated wave speeds and state data
+        """
+        S_Star = right.p - left.p + left.rho * left.u * (S_L - left.u) - right.rho * right.u * (S_R - right.u)
+        S_Star /= left.rho * (S_L - left.u) - right.rho * (S_R - right.u)
+
+        return S_Star
+
     def __evaluate_wave_speeds(self, left, right, p_estimate):
         """
         Evaluate wave speeds based on pressure estimate
@@ -310,8 +319,46 @@ class HLLCRiemannSolver(BaseRiemannSolver):
         S_L = left.u - left.sound_speed() * q_L
         S_R = right.u + right.sound_speed() * q_R
 
-        S_Star = right.p - left.p + left.rho * left.u * (S_L - left.u) - right.rho * right.u * (S_R - right.u)
-        S_Star /= left.rho * (S_L - left.u) - right.rho * (S_R - right.u)
+        S_Star = self.__evaluate_S_star(left, right, S_L, S_R)
+
+        return S_L, S_R, S_Star
+
+    def __evaluate_davis_wave_speeds(self, left, right):
+        """
+        Evaluate the wave speeds based directly on the left and right states
+        """
+        S_L = left.u - left.sound_speed()
+        S_R = right.u + right.sound_speed()
+        S_Star = self.__evaluate_S_star(left, right, S_L, S_R)
+
+        return S_L, S_R, S_Star
+
+    def __evaluate_einfeldt_wave_speeds(self, left, right):
+        """
+        Evaluate the wave speeds based on Einfeldt's estimates
+        :return:
+        """
+        # Calculate d_bar
+        rho_L_root = np.sqrt(left.rho)
+        rho_R_root = np.sqrt(right.rho)
+        eta = 0.5 * rho_L_root * rho_R_root / ((rho_L_root + rho_R_root) ** 2)
+        eta_term = eta * (right.u - left.u) ** 2
+
+        d_squared = (rho_L_root * left.sound_speed() ** 2 + rho_R_root * right.sound_speed() ** 2) / (rho_L_root + rho_R_root)
+        d_squared += eta_term
+        d_bar = np.sqrt(d_squared)
+
+        # Calculate u_bar
+        u_bar = (rho_L_root * left.u + rho_R_root * right.u)
+        u_bar /= (rho_L_root + rho_R_root)
+
+        assert not np.isnan(u_bar)
+        assert not np.isnan(d_bar)
+
+        # Get wave speeds
+        S_L = u_bar - d_bar
+        S_R = u_bar + d_bar
+        S_Star = self.__evaluate_S_star(left, right, S_L, S_R)
 
         return S_L, S_R, S_Star
 
@@ -359,6 +406,8 @@ class HLLCRiemannSolver(BaseRiemannSolver):
         p_estimate = self._estimate_p_star(left, right)
 
         S_L, S_R, S_Star = self.__evaluate_wave_speeds(left, right, p_estimate)
+        # S_L, S_R, S_Star = self.__evaluate_davis_wave_speeds(left, right)
+        # S_L, S_R, S_Star = self.__evaluate_einfeldt_wave_speeds(left, right)  # Currently buggy
 
         return self.__HLLC_flux(left, right, S_L, S_Star, S_R)
 

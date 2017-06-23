@@ -50,25 +50,29 @@ class ThermodynamicState1D(object):
 
         e_tot_initial = self.rho * self.e_int + self.e_kin + e_flux
 
-        # Get new mass ratio
-        self.mass_ratios = self.mass_ratios * self.rho + density_flux
-        self.mass_ratios = self.mass_ratios / self.mass_ratios.sum()
-        assert np.isclose(self.mass_ratios.sum(), 1.0, 1e-14), self.mass_ratios
-        # Simple mass ratio fix to stop out of bounds oscillations in MUSCL
-        for i, mass in enumerate(self.mass_ratios):
-            if mass < 0.0:
-                self.mass_ratios[i] = 0.0
-            if mass > 1.0:
-                self.mass_ratios[i] = 1.0
+        if self.mass_ratios.shape[0] != 1:
+            # Get new mass ratio
+            self.mass_ratios = self.mass_ratios * self.rho + density_flux
+            self.mass_ratios = self.mass_ratios / self.mass_ratios.sum()
+            assert np.isclose(self.mass_ratios.sum(), 1.0, 1e-14), self.mass_ratios
+            # Simple mass ratio fix to stop out of bounds oscillations in MUSCL
+            for i, mass in enumerate(self.mass_ratios):
+                if mass < 0.0:
+                    self.mass_ratios[i] = 0.0
+                if mass > 1.0:
+                    self.mass_ratios[i] = 1.0
 
-        # Update gamma
-        moles = self.mass_ratios / molar_masses
-        moles_ratio = moles / moles.sum()
-        average_specific_heat = (moles_ratio * specific_heats).sum()
-        self.gamma = (average_specific_heat + 1) / average_specific_heat
+            # Update gamma
+            moles = self.mass_ratios / molar_masses
+            moles_ratio = moles / moles.sum()
+            average_specific_heat = (moles_ratio * specific_heats).sum()
+            self.gamma = (average_specific_heat + 1) / average_specific_heat
 
-        # Get new eos states
-        self.rho += density_flux.sum()
+            # Get new eos states
+            self.rho += density_flux.sum()
+        else:
+            self.rho += density_flux
+
         self.mom += momentum_flux
         self.u = self.mom / self.rho
         self.e_kin = 0.5 * self.rho * self.u ** 2

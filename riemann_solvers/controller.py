@@ -101,7 +101,6 @@ class Controller1D(ControllerND):
 
         if self.number_of_fluids > 1:
             assert self.mass_ratios.shape == (self.x.shape[0], self.number_of_fluids)
-            # assert self.flux_calculator is not FluxCalculator1D.HLLC, "Method if currently incompatible with multi material flow"
 
         assert self.x.shape == self.densities.shape == self.velocities.shape
         assert self.velocities.shape == self.pressures.shape == self.internal_energies.shape
@@ -275,7 +274,10 @@ class Controller1D(ControllerND):
 
                 state = ThermodynamicState1D(pressure, rho, velocity, gamma, mass_ratio)
             else:
-                total_density_flux = (self.density_fluxes[i] * self.mass_ratio_fluxes[i, :] - self.density_fluxes[i + 1] * self.mass_ratio_fluxes[i + 1, :])
+                if self.number_of_fluids == 1:
+                    total_density_flux = (self.density_fluxes[i] - self.density_fluxes[i + 1])
+                else:
+                    total_density_flux = (self.density_fluxes[i] * self.mass_ratio_fluxes[i, :] - self.density_fluxes[i + 1] * self.mass_ratio_fluxes[i + 1, :])
                 total_density_flux *= dt / self.dx
                 total_momentum_flux = (self.momentum_fluxes[i] - self.momentum_fluxes[i + 1]) * dt / self.dx
                 total_energy_flux = (self.total_energy_fluxes[i] - self.total_energy_fluxes[i + 1]) * dt / self.dx

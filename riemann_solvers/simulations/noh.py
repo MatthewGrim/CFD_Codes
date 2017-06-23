@@ -74,20 +74,27 @@ class Noh1D(BaseSimulation1D):
         self.flux_calculator = flux_calculator
 
         # Initialise physical states
+        self.number_of_fluids = 1
+        self.molar_masses = np.asarray([29.0])
+        self.specific_heats = np.asarray([2.5])
         self.densities = list()
         self.pressures = list()
         self.vel_x = list()
         self.internal_energies = list()
-        self.gamma = initial_state.gamma
-        for x_loc in self.x:
+        self.mass_ratios = np.zeros((self.x.shape[0], self.number_of_fluids))
+        self.gamma = list()
+        for i, x_loc in enumerate(self.x):
             self.densities.append(initial_state.rho)
             self.pressures.append(initial_state.p)
             self.vel_x.append(initial_state.u)
             self.internal_energies.append(initial_state.e_int)
+            self.gamma.append(initial_state.gamma)
+            self.mass_ratios[i, 0] = 1.0
         self.densities = np.asarray(self.densities)
         self.pressures = np.asarray(self.pressures)
         self.vel_x = np.asarray(self.vel_x)
         self.internal_energies = np.asarray(self.internal_energies)
+        self.gamma = np.asanyarray(self.gamma)
 
         self.boundary_functions = {
             BoundaryConditionND.X_LOW: lambda state : BoundaryCondition1D.reflecting_boundary_condition(state),
@@ -144,7 +151,6 @@ class Noh2D(BaseSimulation2D):
             BoundaryConditionND.Y_HIGH: lambda state, x_loc : BoundaryCondition2D.transmissive_boundary_condition(state,
                                                                                                         BoundaryConditionND.Y_HIGH)
         }
-
         self.is_initialised = True
 
 
@@ -154,7 +160,8 @@ def test_noh_1d():
     """
     run_god = True
     run_rc = True
-    run_hllc = True
+    run_hllc = False
+    run_muscl = True
 
     # Use small pressure value for numerical stability (and to be physically meaningful)
     initial_state = ThermodynamicState1D(1e-4, 1.0, -1.0, 5.0 / 3.0)
@@ -163,17 +170,22 @@ def test_noh_1d():
     if run_god:
         noh_god = Noh1D(initial_state, final_time=0.3, CFL=0.45, flux_calculator=FluxCalculator1D.GODUNOV)
         godunov_sim = Controller1D(noh_god)
-        (times_god, x_god, densities_god, pressures_god, velocities_god, internal_energies_god) = godunov_sim.run_sim()
+        (times_god, x_god, densities_god, pressures_god, velocities_god, internal_energies_god, kinetic_energies_god, mass_ratios_god) = godunov_sim.run_sim()
 
     if run_rc:
         noh_rc = Noh1D(initial_state, final_time=0.3, CFL=0.45, flux_calculator=FluxCalculator1D.RANDOM_CHOICE)
         rc_sim = Controller1D(noh_rc)
-        (times_rc, x_rc, densities_rc, pressures_rc, velocities_rc, internal_energies_rc) = rc_sim.run_sim()
+        (times_rc, x_rc, densities_rc, pressures_rc, velocities_rc, internal_energies_rc, kinetic_energies_rc, mass_ratios_rc) = rc_sim.run_sim()
 
     if run_hllc:
         noh_hllc = Noh1D(initial_state, final_time=0.3, CFL=0.45, flux_calculator=FluxCalculator1D.HLLC)
         hllc_sim = Controller1D(noh_hllc)
-        (times_hllc, x_hllc, densities_hllc, pressures_hllc, velocities_hllc, internal_energies_hllc) = hllc_sim.run_sim()
+        (times_hllc, x_hllc, densities_hllc, pressures_hllc, velocities_hllc, internal_energies_hllc, kinetic_energies_hllc, mass_ratios_hllc) = hllc_sim.run_sim()
+
+    if run_muscl:
+        noh_muscl = Noh1D(initial_state, final_time=0.3, CFL=0.45, flux_calculator=FluxCalculator1D.MUSCL)
+        muscl_sim = Controller1D(noh_muscl)
+        (times_muscl, x_muscl, densities_muscl, pressures_muscl, velocities_muscl, internal_energies_muscl, kinetic_energies_muscl, mass_ratios_muscl) = muscl_sim.run_sim()
 
     # Get analytic solution
     noh_test = AnalyticNoh(initial_state, 0.4, 100)
@@ -193,6 +205,8 @@ def test_noh_1d():
         plt.scatter(x_rc, densities_rc, c='r', label='Random Choice')
     if run_hllc:
         plt.scatter(x_hllc, densities_hllc, c='k', label='HLLC')
+    if run_muscl:
+        plt.scatter(x_muscl, densities_muscl, c='c', label='MUSCL')
     plt.legend()
     plt.subplot(num_plts_x, num_plts_y, 2)
     plt.title("Velocity")
@@ -203,6 +217,8 @@ def test_noh_1d():
         plt.scatter(x_rc, velocities_rc, c='r')
     if run_hllc:
         plt.scatter(x_hllc, velocities_hllc, c='k')
+    if run_muscl:
+        plt.scatter(x_muscl, velocities_muscl, c='c')
     plt.subplot(num_plts_x, num_plts_y, 3)
     plt.title("Pressure")
     plt.plot(x_sol, p_sol)
@@ -212,6 +228,8 @@ def test_noh_1d():
         plt.scatter(x_rc, pressures_rc, c='r')
     if run_hllc:
         plt.scatter(x_hllc, pressures_hllc, c='k')
+    if run_muscl:
+        plt.scatter(x_muscl, pressures_muscl, c='c')
     plt.subplot(num_plts_x, num_plts_y, 4)
     plt.title("Energy")
     plt.plot(x_sol, e_sol)
@@ -221,6 +239,8 @@ def test_noh_1d():
         plt.scatter(x_rc, internal_energies_rc, c='r')
     if run_hllc:
         plt.scatter(x_hllc, internal_energies_hllc, c='k')
+    if run_muscl:
+        plt.scatter(x_muscl, internal_energies_muscl, c='c')
     plt.show()
 
 
@@ -266,5 +286,5 @@ def test_noh_2d():
 
 
 if __name__ == '__main__':
-    # test_noh_1d()
-    test_noh_2d()
+    test_noh_1d()
+    # test_noh_2d()

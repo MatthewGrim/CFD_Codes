@@ -8,7 +8,7 @@ the Riemann solvers here follows those in Toro. There Riemann solvers assume an 
 
 import numpy as np
 
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
+from CFD_Projects.compressible_hydro.eos.thermodynamic_state import ThermodynamicState1D
 
 
 class BaseRiemannSolver(object):

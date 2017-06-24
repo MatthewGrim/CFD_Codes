@@ -5,8 +5,8 @@ Date: 04/12/16
 This file contains the implementation of boundary conditions for a Riemann solver based solution to a CFD problem
 """
 
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState2D
+from CFD_Projects.compressible_hydro.eos.thermodynamic_state import ThermodynamicState1D
+from CFD_Projects.compressible_hydro.eos.thermodynamic_state import ThermodynamicState2D
 
 
 class BoundaryConditionND(object):

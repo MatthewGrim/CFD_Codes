@@ -7,7 +7,7 @@ This file contains tests for thermodynamic state
 
 import unittest
 
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
+from CFD_Projects.compressible_hydro.eos.thermodynamic_state import ThermodynamicState1D
 
 
 class TestThermodynamicState(unittest.TestCase):

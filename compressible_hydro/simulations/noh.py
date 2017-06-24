@@ -8,17 +8,17 @@ This file contains a class used to simulate a 1D Noh problem as outlined in the 
 import numpy as np
 from matplotlib import pyplot as plt
 
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState2D
-from CFD_Projects.riemann_solvers.simulations.base_simulation import BaseSimulation1D
-from CFD_Projects.riemann_solvers.simulations.base_simulation import BaseSimulation2D
-from CFD_Projects.riemann_solvers.flux_calculator.flux_calculator import FluxCalculator1D
-from CFD_Projects.riemann_solvers.flux_calculator.flux_calculator import FluxCalculator2D
-from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryConditionND
-from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryCondition1D
-from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryCondition2D
-from CFD_Projects.riemann_solvers.controller import Controller1D
-from CFD_Projects.riemann_solvers.controller import Controller2D
+from CFD_Projects.compressible_hydro.boundary_conditions.boundary_condition import BoundaryCondition1D
+from CFD_Projects.compressible_hydro.boundary_conditions.boundary_condition import BoundaryCondition2D
+from CFD_Projects.compressible_hydro.boundary_conditions.boundary_condition import BoundaryConditionND
+from CFD_Projects.compressible_hydro.eos.thermodynamic_state import ThermodynamicState1D
+from CFD_Projects.compressible_hydro.eos.thermodynamic_state import ThermodynamicState2D
+from CFD_Projects.compressible_hydro.flux_calculator.flux_calculator import FluxCalculator1D
+from CFD_Projects.compressible_hydro.flux_calculator.flux_calculator import FluxCalculator2D
+from CFD_Projects.compressible_hydro.simulations.base_simulation import BaseSimulation1D
+from CFD_Projects.compressible_hydro.simulations.base_simulation import BaseSimulation2D
+from compressible_hydro.controller.controller_1d import Controller1D
+from compressible_hydro.controller.controller_2d import Controller2D
 
 
 class AnalyticNoh(object):

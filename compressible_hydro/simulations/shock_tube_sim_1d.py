@@ -9,13 +9,13 @@ this file should replicate the results from Toro - Chapter 6
 import numpy as np
 from matplotlib import pyplot as plt
 
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
-from CFD_Projects.riemann_solvers.simulations.analytic_shock_tube import AnalyticShockTube
-from CFD_Projects.riemann_solvers.simulations.base_simulation import BaseSimulation1D
-from CFD_Projects.riemann_solvers.flux_calculator.flux_calculator import FluxCalculator1D
-from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryConditionND
-from CFD_Projects.riemann_solvers.boundary_conditions.boundary_condition import BoundaryCondition1D
-from CFD_Projects.riemann_solvers.controller import Controller1D
+from CFD_Projects.compressible_hydro.boundary_conditions.boundary_condition import BoundaryCondition1D
+from CFD_Projects.compressible_hydro.boundary_conditions.boundary_condition import BoundaryConditionND
+from CFD_Projects.compressible_hydro.eos.thermodynamic_state import ThermodynamicState1D
+from CFD_Projects.compressible_hydro.flux_calculator.flux_calculator import FluxCalculator1D
+from CFD_Projects.compressible_hydro.simulations.analytic_shock_tube import AnalyticShockTube
+from CFD_Projects.compressible_hydro.simulations.base_simulation import BaseSimulation1D
+from compressible_hydro.controller.controller_1d import Controller1D
 
 
 class ShockTube1D(BaseSimulation1D):

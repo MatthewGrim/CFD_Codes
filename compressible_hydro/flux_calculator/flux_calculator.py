@@ -5,11 +5,11 @@ Date: 04/10/16
 This file contains a a class providing methods to calculate the fluxes using Riemann solver based methods 
 """
 
-from CFD_Projects.riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
-from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import IterativeRiemannSolver
-from CFD_Projects.riemann_solvers.flux_calculator.riemann_solver import HLLCRiemannSolver
-from CFD_Projects.riemann_solvers.flux_calculator.van_der_corput import VanDerCorput
-from CFD_Projects.riemann_solvers.flux_calculator.flux_limiter import *
+from CFD_Projects.compressible_hydro.eos.thermodynamic_state import ThermodynamicState1D
+from CFD_Projects.compressible_hydro.flux_calculator.riemann_solver import IterativeRiemannSolver
+from CFD_Projects.compressible_hydro.flux_calculator.riemann_solver import HLLCRiemannSolver
+from CFD_Projects.compressible_hydro.flux_calculator.van_der_corput import VanDerCorput
+from CFD_Projects.compressible_hydro.flux_calculator.flux_limiter import *
 
 import numpy as np
 

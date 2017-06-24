@@ -11,4 +11,5 @@ in my work. The main contributors are listed below:
 
 1. Lorena A. Barba - CFD Python: 12 Steps to Navier-Stokes
 2. Eleuterio F. Toro - Riemann Solvers and Numerical Methods for Fluid Dynamics
+3. J. F. Manwell - Wind Energy Explained
 """

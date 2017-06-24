@@ -8,7 +8,7 @@ Tests for the ideal mhd fluid solver
 import unittest
 import numpy as np
 
-from CFD_Projects.mhd.pysrc.applets.ideal_field_solver import ChargedParticle
+from CFD_Projects.pic.pysrc.applets.ideal_field_solver import ChargedParticle
 
 
 class ChargedParticleTest(unittest.TestCase):

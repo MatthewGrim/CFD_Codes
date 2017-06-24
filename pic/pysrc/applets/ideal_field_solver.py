@@ -6,7 +6,7 @@ This file contains a solver to obtain the analytic solution to a 3D magnetic fie
 with a given velocity and charge.
 """
 
-from CFD_Projects.mhd.pysrc.applets.vector_ops import *
+from CFD_Projects.pic.pysrc.applets.vector_ops import *
 
 import numpy as np
 

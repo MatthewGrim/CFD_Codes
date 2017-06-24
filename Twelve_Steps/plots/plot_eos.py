@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # Project imports
-from equation_of_state_model import EOS
+from CFD_Projects.Twelve_Steps.models.equation_of_state_model import EOS
 
 
 def plot_redlich_kwong_ideal_gas_comparison():

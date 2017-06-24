@@ -9,7 +9,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # Project includes
-from turbulence_model import Turbulence
+from CFD_Projects.Twelve_Steps.models.turbulence_model import Turbulence
 
 
 def plot_1d_velocities():

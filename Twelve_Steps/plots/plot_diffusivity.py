@@ -9,7 +9,7 @@ from matplotlib import cm
 import numpy as np
 
 # Project includes
-from diffusion_model import Diffusion
+from CFD_Projects.Twelve_Steps.models.diffusion_model import Diffusion
 
 
 def plot_mass_diffusivity_co2():

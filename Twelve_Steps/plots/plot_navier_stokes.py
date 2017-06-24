@@ -7,8 +7,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # Project imports
-from navier_stokes_model import NavierStokes
-from plot_functions import Plot
+from CFD_Projects.Twelve_Steps.models.navier_stokes_model import NavierStokes
+from CFD_Projects.Twelve_Steps.plots.plot_functions import Plot
 
 
 def plot_1d_convection():
@@ -183,5 +183,5 @@ if __name__ == '__main__':
     # plot_2d_convection()
     # plot_2d_laplace()
     # plot_2d_poisson()
-    # plot_cavity_flow()
-    plot_channel_flow()
+    plot_cavity_flow()
+    # plot_channel_flow()

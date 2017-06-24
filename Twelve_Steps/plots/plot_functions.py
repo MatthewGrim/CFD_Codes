@@ -3,8 +3,7 @@ Author: Rohan Ramasamy
 Date: 09/04/16
 This file contains a class to plot data
 """
-# Standard Imports
-from mpl_toolkits.mplot3d import Axes3D
+
 from matplotlib import cm
 from matplotlib import pyplot as plt
 import numpy as np

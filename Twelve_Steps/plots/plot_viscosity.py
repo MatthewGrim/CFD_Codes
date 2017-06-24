@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 # Project includes
-from viscosity_model import Viscosity
+from CFD_Projects.Twelve_Steps.models.viscosity_model import Viscosity
 
 
 def plot_air_sutherland_viscosity():

@@ -8,7 +8,7 @@ A plotting tool to visualise hugoniot relations
 import numpy as np
 from matplotlib import pyplot as plt
 
-from riemann_solvers.eos.thermodynamic_state import ThermodynamicState1D
+from compressible_hydro.eos.thermodynamic_state import ThermodynamicState1D
 
 
 def hugoniot_curves(state, num_pts=100, p_multiplier=1000.0):

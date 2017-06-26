@@ -13,7 +13,7 @@ class LinearAdvectionSim(object):
     """
     This class is used to run simple linear advection simulations on a uniform one dimensional.
     """
-    def __init__(self, x, initial_grid, flux_calculator_model, final_time, num_pts=1000, a=None):
+    def __init__(self, x, initial_grid, flux_calculator_model, final_time, a=None, CFL=0.8):
         """
         Constuctor for linear advection simulation solving:
 
@@ -26,7 +26,7 @@ class LinearAdvectionSim(object):
         :param num_pts: Number of points in time
         """
         assert isinstance(final_time, float) and final_time > 0.0
-        assert isinstance(flux_calculator_model, AdvectionFluxCalculator)
+        # assert isinstance(flux_calculator_model, AdvectionFluxCalculator)
         assert isinstance(x, np.ndarray)
         assert isinstance(initial_grid, np.ndarray)
         assert x.shape == initial_grid.shape
@@ -35,24 +35,43 @@ class LinearAdvectionSim(object):
         self.x = x
         self.u = initial_grid
         self.final_time = final_time
-        self.times = np.linspace(0.0, final_time, num_pts)
-        self.dt = self.times[1] - self.times[0]
+        self.times = list()
+        self.times.append(0.0)
         self.dx = self.x[1] - self.x[0]
         self.a = a
+        self.CFL = CFL
 
-    def update_states(self, fluxes):
+    def calculate_time_step(self):
+        """
+        Function to evaluate the dt for the next time step
+        """
+        if self.a is not None:
+            S = self.a
+        else:
+            S = np.max(self.u)
+        return self.CFL * self.dx / S
+
+    def update_states(self, fluxes, dt):
         """
         Function to update the states on the grid based on fluxes between cells
         """
         for i, state in enumerate(self.u):
-            self.u[i] += fluxes[i] - fluxes[i + 1]
+            self.u[i] += (fluxes[i] - fluxes[i + 1]) * dt / self.dx
 
     def run_simulation(self):
         """
         Main function to run simulation and return final grid state
         """
-        for i, t in enumerate(self.times):
-            fluxes = self.flux_calculator.evaluate_fluxes(self.u, self.dx. self.dt, a=self.a)
-            self.update_states(fluxes)
+        t = 0.0
+        ts = 0
+        while t < self.final_time:
+            dt = self.calculate_time_step()
+            dt = dt if t + dt < self.final_time else self.final_time - t
+            fluxes = self.flux_calculator.evaluate_fluxes(self.u, self.dx, dt, a=self.a)
+            self.update_states(fluxes, dt)
+
+            t += dt
+            ts += 1
+            print("Time Step: {}, {}".format(ts, t))
 
         return self.x, self.u

@@ -19,8 +19,8 @@ def example():
     x_analytic = np.linspace(0.0, 2.0, num_pts)
     u_analytic = np.exp(-8 * (x_analytic - 1.0) ** 2)
 
-    # sim = LinearAdvectionSim(x, u, LaxFriedrichsFluxCalculator, 1.0, a=1.0)
-    sim = LinearAdvectionSim(x, u, LaxWendroffFluxCalculator, 1.0, a=1.0)
+    sim = LinearAdvectionSim(x, u, LaxFriedrichsFluxCalculator, 1.0, a=1.0)
+    # sim = LinearAdvectionSim(x, u, LaxWendroffFluxCalculator, 1.0, a=1.0)
     x_res, u_res = sim.run_simulation()
 
     plt.figure()

@@ -26,8 +26,8 @@ def example():
     x_init = np.copy(x)
     u_init = np.copy(u)
 
-    # sim = LinearAdvectionSim(x, u, LaxFriedrichsFluxCalculator, 1.0, a=1.0)
-    sim = LinearAdvectionSim(x, u, LaxWendroffFluxCalculator, 1.0, a=1.0)
+    sim = LinearAdvectionSim(x, u, LaxFriedrichsFluxCalculator, 1.0, a=1.0)
+    # sim = LinearAdvectionSim(x, u, LaxWendroffFluxCalculator, 1.0, a=1.0)
     x_res, u_res = sim.run_simulation()
 
     plt.figure()

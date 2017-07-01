@@ -19,8 +19,9 @@ def example(a=None):
     x_init = np.copy(x)
     u_init = np.copy(u)
 
-    # sim = LinearAdvectionSim(x, u, LaxFriedrichsFluxCalculator, 1.0, a=a)
-    sim = LinearAdvectionSim(x, u, LaxWendroffFluxCalculator, 1.0, a=a)
+    sim = LinearAdvectionSim(x, u, LaxFriedrichsFluxCalculator, 1.0, a=a)
+    # For LaxWendroff, If final_time > 0.4, system becomes unstable at discontinuity
+    # sim = LinearAdvectionSim(x, u, LaxWendroffFluxCalculator, 0.3, a=a)
     x_res, u_res = sim.run_simulation()
 
     plt.figure()

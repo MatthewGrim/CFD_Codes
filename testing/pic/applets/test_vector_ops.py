@@ -105,6 +105,56 @@ class VectorOpsTest(unittest.TestCase):
         self.assertAlmostEqual(0.0, res_3[1])
         self.assertAlmostEqual(1.0, res_3[2])
 
+    def test_rotate_arbitrary_axis(self):
+        point = np.array([1.0, 0.0, 0.0])
+        vector = np.array([0.0, 1.0, 0.0])
+        rotated_point = arbitrary_axis_rotation_3d(point, vector, np.pi / 2)
+        self.assertAlmostEqual(0.0, rotated_point[0])
+        self.assertAlmostEqual(0.0, rotated_point[1])
+        self.assertAlmostEqual(-1.0, rotated_point[2])
+
+        point = np.array([0.0, 0.0, 1.0])
+        vector = np.array([0.0, 1.0, 0.0])
+        rotated_point = arbitrary_axis_rotation_3d(point, vector, np.pi / 2)
+        self.assertAlmostEqual(1.0, rotated_point[0])
+        self.assertAlmostEqual(0.0, rotated_point[1])
+        self.assertAlmostEqual(0.0, rotated_point[2])
+
+        point = np.array([0.0, 1.0, 0.0])
+        vector = np.array([1.0, 0.0, 0.0])
+        rotated_point = arbitrary_axis_rotation_3d(point, vector, np.pi / 2)
+        self.assertAlmostEqual(0.0, rotated_point[0])
+        self.assertAlmostEqual(0.0, rotated_point[1])
+        self.assertAlmostEqual(1.0, rotated_point[2])
+
+        point = np.array([0.0, 0.0, 1.0])
+        vector = np.array([1.0, 0.0, 0.0])
+        rotated_point = arbitrary_axis_rotation_3d(point, vector, np.pi / 2)
+        self.assertAlmostEqual(0.0, rotated_point[0])
+        self.assertAlmostEqual(-1.0, rotated_point[1])
+        self.assertAlmostEqual(0.0, rotated_point[2])
+
+        point = np.array([0.0, 1.0, 0.0])
+        vector = np.array([0.0, 0.0, 1.0])
+        rotated_point = arbitrary_axis_rotation_3d(point, vector, np.pi / 2)
+        self.assertAlmostEqual(-1.0, rotated_point[0])
+        self.assertAlmostEqual(0.0, rotated_point[1])
+        self.assertAlmostEqual(0.0, rotated_point[2])
+
+        point = np.array([1.0, 0.0, 0.0])
+        vector = np.array([0.0, 0.0, 1.0])
+        rotated_point = arbitrary_axis_rotation_3d(point, vector, np.pi / 2)
+        self.assertAlmostEqual(0.0, rotated_point[0])
+        self.assertAlmostEqual(1.0, rotated_point[1])
+        self.assertAlmostEqual(0.0, rotated_point[2])
+
+        point = np.array([0.0, 1.0, 0.0])
+        vector = np.array([0.0, 1.0, 0.0])
+        rotated_point = arbitrary_axis_rotation_3d(point, vector, np.pi / 2)
+        self.assertAlmostEqual(0.0, rotated_point[0])
+        self.assertAlmostEqual(1.0, rotated_point[1])
+        self.assertAlmostEqual(0.0, rotated_point[2])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -102,3 +102,33 @@ def rotate_3d(vector, rotation_angles):
     rotated_vector[2] = R[2, 0] * vector[0] + R[2, 1] * vector[1] + R[2, 2] * vector[2]
 
     return rotated_vector
+
+
+def arbitrary_axis_rotation_3d(point, a, rotation_angle):
+    """
+    :param point: The point to be rotated
+    :param a: The axis about which to rotate
+    :param rotation_angle: The angle to rotate about the axis
+    :return:
+    """
+    assert isinstance(rotation_angle, float)
+    assert isinstance(point, np.ndarray) and point.shape[0] == 3 and len(point.shape) == 1, \
+            "Point must be a 3D"
+    assert isinstance(a, np.ndarray) and a.shape[0] == 3 and len(a.shape) == 1, \
+            "Axis of rotation should be 3D"
+
+    a /= magnitude(a)
+    c = np.cos(rotation_angle)
+    s = np.sin(rotation_angle)
+
+    R = np.asarray([[c + a[0] ** 2 * (1 - c), a[0] * a[1] * (1 - c) - a[2] * s, a[0] * a[2] * (1 - c) + a[1] * s],
+                    [a[1] * a[0] * (1 - c) + a[2] * s, c + a[1] ** 2 * (1 - c), a[1] * a[2] * (1 - c) - a[0] * s],
+                    [a[2] * a[0] * (1 - c) - a[1] * s, a[2] * a[1] * (1 - c) + a[0] * s, c + a[2] ** 2 * (1 - c)]])
+
+    rotated_vector = np.zeros(3)
+    rotated_vector[0] = R[0, 0] * point[0] + R[0, 1] * point[1] + R[0, 2] * point[2]
+    rotated_vector[1] = R[1, 0] * point[0] + R[1, 1] * point[1] + R[1, 2] * point[2]
+    rotated_vector[2] = R[2, 0] * point[0] + R[2, 1] * point[1] + R[2, 2] * point[2]
+
+    return rotated_vector
+

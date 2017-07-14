@@ -9,6 +9,8 @@ with a given velocity and charge.
 from CFD_Projects.pic.pysrc.applets.vector_ops import *
 
 import numpy as np
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 
 class ChargedParticle(object):
@@ -37,7 +39,7 @@ class ChargedParticle(object):
         return self._charge
 
 
-def solve_field(particle, B):
+def solve_B_field(particle, B, final_time, num_pts=1000):
     """
     Solve for the velocity function with respect to time
     """
@@ -50,22 +52,73 @@ def solve_field(particle, B):
     F = cross(v_perpendicular, B) * particle.charge
     radius = magnitude(F) / (particle.mass * dot(v_perpendicular, v_perpendicular))
     centre_of_rotation = F * radius / magnitude(F) + particle.position
+    relative_position = particle.position - centre_of_rotation
 
     def parallel_motion(t):
         return v_parallel * t
 
     def perpendicular_motion(t):
         angle = omega * t
-        return rotate_3d()
+        return arbitrary_axis_rotation_3d(relative_position, B, angle)
+
+    times = np.linspace(0.0, final_time, num_pts)
+    positions = np.zeros((num_pts, 3))
+    for i, t in enumerate(times):
+        positions[i, :] = particle.position + parallel_motion(t) + perpendicular_motion(t)
+
+    return times, positions
+
+
+def solve_E_field(particle, E, final_time, num_pts=1000):
+    """
+    Solve for the velocity function with respect to time
+    """
+    assert isinstance(E, np.ndarray) and E.shape[0] == 3 and len(E.shape) == 1, "B must be a 3D vector"
+    F = E * particle.charge
+
+    def E_field_motion(t):
+        return 0.5 * F / particle.mass * t ** 2
+
+    times = np.linspace(0.0, final_time, num_pts)
+    positions = np.zeros((num_pts, 3))
+    for i, t in enumerate(times):
+        positions[i, :] = particle.position + particle.velocity * t + E_field_motion(t)
+
+    return times, positions
+
+
+def B_field_example():
+    """
+    Example B field solution
+    :return:
+    """
+    particle = ChargedParticle(1.0, 2.0, np.asarray([1.0, 0.0, 0.0]), np.asarray([0.0, 1.0, 1.0]))
+    B = np.asarray([0.0, 0.0, 1.0])
+
+    times, positions = solve_B_field(particle, B, 3.0)
+
+    fig = plt.figure()
+    ax = fig.add_subplot('111', projection='3d')
+    ax.plot(positions[:, 0], positions[:, 1], positions[:, 2])
+    plt.show()
+
+
+def E_field_example():
+    """
+    Example E field solution
+    :return:
+    """
+    particle = ChargedParticle(1.0, 2.0, np.asarray([1.0, 0.0, 0.0]), np.asarray([0.0, 1.0, 0.0]))
+    E = np.asarray([0.0, 0.0, 3.0])
+
+    times, positions = solve_E_field(particle, E, 3.0)
+
+    fig = plt.figure()
+    ax = fig.add_subplot('111', projection='3d')
+    ax.plot(positions[:, 0], positions[:, 1], positions[:, 2])
+    plt.show()
 
 
 if __name__ == '__main__':
-    particle = ChargedParticle(1.0, 2.0, np.asarray([1.0, 2.0, 3.0]), np.asarray([1.0, 1.0, 1.0]))
-
-    print(particle.mass)
-    print(particle.charge)
-    print(particle.position)
-    print(particle.velocity)
-
-    print(magnitude(particle.velocity))
-    print(dot(particle.velocity, particle.position))
+    # B_field_example()
+    E_field_example()

@@ -19,12 +19,65 @@ class FluxCalculatorND(object):
     RANDOM_CHOICE = 2
     HLLC = 3
     MUSCL = 4
+    LAX_WENDROFF = 5
 
 
 class FluxCalculator1D(FluxCalculatorND):
     def __init__(self):
         pass
-    
+
+    @staticmethod
+    def calculate_lax_wendroff_fluxes(densities, pressures, velocities, gamma, mass_ratios, dt, dx, alpha=1.5):
+        staggered_densities = np.zeros(len(densities) - 1)
+        staggered_momentum = np.zeros(len(densities) - 1)
+        staggered_energies = np.zeros(len(densities) - 1)
+
+        # Predictor
+        for i, rho_stag in enumerate(staggered_densities):
+            rho_minus = densities[i]
+            rho_0 = densities[i + 1]
+            u_minus = velocities[i]
+            u_0 = velocities[i + 1]
+            p_minus = pressures[i]
+            p_0 = pressures[i + 1]
+            energy_minus = p_minus / (gamma[i] - 1) + 0.5 * rho_minus * u_minus ** 2
+            energy_0 = p_0 / (gamma[i + 1] - 1) + 0.5 * rho_0 * u_0 ** 2
+
+            staggered_densities[i] = 0.5 * dt / dx * (rho_minus * u_minus - rho_0 * u_0)
+            staggered_densities[i] += 0.5 * (rho_minus + rho_0)
+            staggered_momentum[i] = 0.5 * dt / dx * (rho_minus * u_minus ** 2 + p_minus - rho_0 * u_0 ** 2 - p_0)
+            staggered_momentum[i] += 0.5 * (rho_minus * u_minus + rho_0 * u_0)
+            staggered_energies[i] = 0.5 * dt / dx * ((energy_minus + p_minus) * u_minus - (energy_0 - p_0) * u_0)
+            staggered_energies[i] += 0.5 * (energy_minus + energy_0)
+
+        # Corrector
+        density_fluxes = np.zeros(len(densities) - 1)
+        momentum_fluxes = np.zeros(len(densities) - 1)
+        total_energy_fluxes = np.zeros(len(densities) - 1)
+        mass_ratio_fluxes = None
+        for i, flux in enumerate(density_fluxes):
+            e_kin_stag = 0.5 * staggered_momentum[i] ** 2 / staggered_densities[i]
+            e_int_stag = staggered_energies[i] - e_kin_stag
+            p_stag = e_int_stag * (gamma[i] - 1)
+
+            density_fluxes[i] = staggered_momentum[i]
+            momentum_fluxes[i] = 2 * e_kin_stag + p_stag
+            total_energy_fluxes[i] = staggered_energies[i] + p_stag
+            total_energy_fluxes[i] *= staggered_momentum[i] / staggered_densities[i]
+
+        # Artificial Viscosity
+        for i, flux in enumerate(density_fluxes):
+            rho_bar = 0.5 * (densities[i] + densities[i + 1])
+            u_minus = velocities[i]
+            u_0 = velocities[i + 1]
+            u_bar = 0.5 * (u_0 + u_minus)
+
+            viscosity = (u_0 - u_minus) * np.abs(u_0 - u_minus)
+            momentum_fluxes[i] -= alpha * rho_bar * viscosity
+            total_energy_fluxes[i] -= alpha * rho_bar * u_bar * viscosity
+
+        return density_fluxes, momentum_fluxes, total_energy_fluxes, mass_ratio_fluxes
+
     @staticmethod
     def calculate_godunov_fluxes(densities, pressures, velocities, gamma, mass_ratios):
         """

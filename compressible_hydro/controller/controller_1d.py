@@ -145,7 +145,18 @@ class Controller1D(ControllerND):
         """
         assert isinstance(ts, int)
 
-        if self.flux_calculator == FluxCalculator1D.GODUNOV:
+        if self.flux_calculator == FluxCalculator1D.LAX_WENDROFF:
+            self.density_fluxes, \
+            self.momentum_fluxes, \
+            self.total_energy_fluxes, \
+            self.mass_ratio_fluxes = FluxCalculator1D.calculate_lax_wendroff_fluxes(self.densities,
+                                                                                    self.pressures,
+                                                                                    self.velocities,
+                                                                                    self.gamma,
+                                                                                    self.mass_ratios,
+                                                                                    dt,
+                                                                                    self.dx)
+        elif self.flux_calculator == FluxCalculator1D.GODUNOV:
             self.density_fluxes, \
             self.momentum_fluxes, \
             self.total_energy_fluxes, \

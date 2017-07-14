@@ -88,13 +88,21 @@ def example():
     membrane_location = [0.3, 0.5, 0.5, 0.4, 0.8]
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
+    run_lax_wendroff = True
     run_god = False
     run_rc = False
-    run_hllc = True
+    run_hllc = False
     run_muscl = False
-    for i in range(1, 5):
+    for i in range(0, 5):
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
+
+        if run_lax_wendroff:
+            shock_tube_lax_wendroff = ShockTube1D(left_state, right_state, membrane_location[i],
+                                                  final_time=end_times[i], CFL=0.45,
+                                                  flux_calculator=FluxCalculator1D.LAX_WENDROFF)
+            godunov_sim = Controller1D(shock_tube_lax_wendroff)
+            (times_lax_wendroff, x_lax_wendroff, densities_lax_wendroff, pressures_lax_wendroff, velocities_lax_wendroff, internal_energies_lax_wendroff, kinetic_energies_lax_wendroff, mass_ratios_lax_wendroff) = godunov_sim.run_sim()
 
         if run_god:
             shock_tube_god = ShockTube1D(left_state, right_state, membrane_location[i],
@@ -137,6 +145,8 @@ def example():
         plt.subplot(num_plts_x, num_plts_y, 1)
         plt.title("Density")
         plt.plot(x_sol, rho_sol)
+        if run_lax_wendroff:
+            plt.scatter(x_lax_wendroff, densities_lax_wendroff, c='b')
         if run_god:
             plt.scatter(x_god, densities_god, c='g')
         if run_rc:
@@ -149,6 +159,8 @@ def example():
         plt.subplot(num_plts_x, num_plts_y, 2)
         plt.title("Velocity")
         plt.plot(x_sol, u_sol)
+        if run_lax_wendroff:
+            plt.scatter(x_lax_wendroff, velocities_lax_wendroff, c='b')
         if run_god:
             plt.scatter(x_god, velocities_god, c='g')
         if run_rc:
@@ -161,6 +173,8 @@ def example():
         plt.subplot(num_plts_x, num_plts_y, 3)
         plt.title("Pressure")
         plt.plot(x_sol, p_sol)
+        if run_lax_wendroff:
+            plt.scatter(x_lax_wendroff, pressures_lax_wendroff, c='b')
         if run_god:
             plt.scatter(x_god, pressures_god, c='g')
         if run_rc:
@@ -173,6 +187,8 @@ def example():
         plt.subplot(num_plts_x, num_plts_y, 4)
         plt.title("Specific Internal Energy")
         plt.plot(x_sol, e_int_sol)
+        if run_lax_wendroff:
+            plt.scatter(x_lax_wendroff, internal_energies_lax_wendroff, c='b')
         if run_god:
             plt.scatter(x_god, internal_energies_god, c='g')
         if run_rc:
@@ -185,6 +201,8 @@ def example():
         plt.subplot(num_plts_x, num_plts_y, 5)
         plt.title("Specific Kinetic Energy")
         plt.plot(x_sol, e_kin_sol)
+        if run_lax_wendroff:
+            plt.scatter(x_lax_wendroff, kinetic_energies_lax_wendroff, c='b')
         if run_god:
             plt.scatter(x_god, kinetic_energies_god / densities_god, c='g')
         if run_rc:
@@ -196,6 +214,8 @@ def example():
         plt.xlim([0.0, 1.0])
         plt.subplot(num_plts_x, num_plts_y, 6)
         plt.title("Mass Ratios")
+        if run_lax_wendroff:
+            plt.scatter(x_lax_wendroff, mass_ratios_lax_wendroff, c='b')
         if run_god:
             plt.plot(x_god, mass_ratios_god, c='g')
         if run_rc:

@@ -6,11 +6,11 @@ This file contains a solver to obtain the analytic solution to a 3D magnetic fie
 with a given velocity and charge.
 """
 
-from CFD_Projects.pic.pysrc.applets.vector_ops import *
-
 import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
+from CFD_Projects.pic.pysrc.geometry.vector_ops import *
 
 
 class ChargedParticle(object):
@@ -58,8 +58,8 @@ def solve_B_field(particle, B, final_time, num_pts=1000):
         return v_parallel * t
 
     def perpendicular_motion(t):
-        angle = omega * t
-        return arbitrary_axis_rotation_3d(relative_position, B, angle)
+        angle = -omega * t
+        return arbitrary_axis_rotation_3d(relative_position, B, angle) - particle.position
 
     times = np.linspace(0.0, final_time, num_pts)
     positions = np.zeros((num_pts, 3))
@@ -120,5 +120,5 @@ def E_field_example():
 
 
 if __name__ == '__main__':
-    # B_field_example()
-    E_field_example()
+    B_field_example()
+    # E_field_example()

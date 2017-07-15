@@ -7,7 +7,7 @@ Tests for the ideal mhd fluid solver
 
 import unittest
 
-from CFD_Projects.pic.pysrc.applets.vector_ops import *
+from pic.pysrc.geometry.vector_ops import *
 
 
 class VectorOpsTest(unittest.TestCase):

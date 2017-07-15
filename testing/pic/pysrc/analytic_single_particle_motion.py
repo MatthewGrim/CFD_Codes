@@ -6,14 +6,15 @@ Tests for the ideal mhd fluid solver
 """
 
 import unittest
+
 import numpy as np
 
-from CFD_Projects.pic.pysrc.applets.ideal_field_solver import ChargedParticle
+from pic.pysrc.simulations.analytic_single_particle_motion import ChargedParticle
 
 
 class ChargedParticleTest(unittest.TestCase):
     def test_constructor(self):
-        particle = ChargedParticle(1.0, 2.0, np.linspace(1.0, 2.0, 3))
+        particle = ChargedParticle(1.0, 2.0, np.linspace(1.0, 2.0, 3), np.linspace(1.0, 2.0, 3))
 
         self.assertAlmostEqual(particle.mass, 1.0)
         self.assertAlmostEqual(particle.charge, 2.0)

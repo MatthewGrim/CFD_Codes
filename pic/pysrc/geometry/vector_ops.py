@@ -13,9 +13,9 @@ def magnitude(vector):
     """
     Function to get the magnitude of a vector
     """
-    assert isinstance(vector, np.ndarray) and len(vector.shape) == 1
-    vector *= vector
-    squared_magnitude = vector.sum()
+    assert isinstance(vector, np.ndarray) and len(vector.shape) == 1, vector
+    squared_vector = vector * vector
+    squared_magnitude = squared_vector.sum()
     return math.sqrt(squared_magnitude)
 
 
@@ -25,9 +25,9 @@ def dot(vector_1, vector_2):
     :return:
     """
     assert isinstance(vector_1, np.ndarray) and vector_1.shape[0] == 3 and len(vector_1.shape) == 1, \
-            "Vector must be a 3D"
+            "Vector must be a 3D: {}".format(vector_1)
     assert isinstance(vector_2, np.ndarray) and vector_2.shape[0] == 3 and len(vector_2.shape) == 1, \
-            "Vector must be a 3D"
+            "Vector must be a 3D: ".format(vector_2)
 
     return (vector_1 * vector_2).sum()
 
@@ -37,9 +37,9 @@ def vector_projection(vector_1, vector_2):
     Project vector 1 onto the direction of vector 2
     """
     assert isinstance(vector_1, np.ndarray) and vector_1.shape[0] == 3 and len(vector_1.shape) == 1, \
-            "Vector must be a 3D"
+            "Vector must be a 3D: {}".format(vector_1)
     assert isinstance(vector_2, np.ndarray) and vector_2.shape[0] == 3 and len(vector_2.shape) == 1, \
-            "Vector must be a 3D"
+            "Vector must be a 3D: ".format(vector_2)
 
     v_2_norm = vector_2 / magnitude(vector_2)
     return dot(vector_1, v_2_norm) * v_2_norm
@@ -50,9 +50,9 @@ def cross(vector_1, vector_2):
     Perform the cross product vector_1 X vector_2
     """
     assert isinstance(vector_1, np.ndarray) and vector_1.shape[0] == 3 and len(vector_1.shape) == 1, \
-            "Vector must be a 3D"
+            "Vector must be a 3D: {}".format(vector_1)
     assert isinstance(vector_2, np.ndarray) and vector_2.shape[0] == 3 and len(vector_2.shape) == 1, \
-            "Vector must be a 3D"
+            "Vector must be a 3D: ".format(vector_2)
     res = np.zeros(3)
     res[0] = vector_1[1] * vector_2[2] - vector_1[2] * vector_2[1]
     res[1] = vector_1[2] * vector_2[0] - vector_1[0] * vector_2[2]

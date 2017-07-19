@@ -50,7 +50,7 @@ def solve_B_field(particle, B, final_time, num_pts=1000):
     v_perpendicular = v - v_parallel
 
     F = cross(v_perpendicular, B) * particle.charge
-    radius = magnitude(F) / (particle.mass * dot(v_perpendicular, v_perpendicular))
+    radius = (particle.mass * dot(v_perpendicular, v_perpendicular)) / magnitude(F)
     centre_of_rotation = F * radius / magnitude(F) + particle.position
     relative_position = particle.position - centre_of_rotation
 
@@ -59,12 +59,12 @@ def solve_B_field(particle, B, final_time, num_pts=1000):
 
     def perpendicular_motion(t):
         angle = -omega * t
-        return arbitrary_axis_rotation_3d(relative_position, B, angle) - particle.position
+        return arbitrary_axis_rotation_3d(relative_position, B, angle)
 
     times = np.linspace(0.0, final_time, num_pts)
     positions = np.zeros((num_pts, 3))
     for i, t in enumerate(times):
-        positions[i, :] = particle.position + parallel_motion(t) + perpendicular_motion(t)
+        positions[i, :] = centre_of_rotation + parallel_motion(t) + perpendicular_motion(t)
 
     return times, positions
 

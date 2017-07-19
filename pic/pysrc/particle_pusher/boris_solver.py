@@ -60,7 +60,9 @@ def boris_solver(E_field, B_field, X, V, Q, M, dt):
     return X_plus, V_plus
 
 
-def single_particle_example():
+def single_particle_example(b_field=np.asarray([0.0, 0.0, 1.0]),
+                            X_0=np.asarray([[0.0, 1.0, 0.0]]),
+                            V_0=np.asarray([[-2.0, 0.0, 1.0]])):
     """
     Example solution to simple magnetic field case
     :return:
@@ -68,15 +70,15 @@ def single_particle_example():
     def B_field(x):
         B = np.zeros(x.shape)
         for i, b in enumerate(B):
-            B[i, :] = np.asarray([0.0, 0.0, 1.0])
+            B[i, :] = b_field
         return B
 
     def E_field(x):
         E = np.zeros(x.shape)
         return E
 
-    X = np.asarray([[0.0, 1.0, 0.0]])
-    V = np.asarray([[1.0, 0.0, 0.0]])
+    X = X_0
+    V = V_0
     Q = np.asarray([1.0])
     M = np.asarray([1.0])
 
@@ -98,8 +100,8 @@ def single_particle_example():
         X = x
         V = v
 
-    particle = ChargedParticle(1.0, 1.0, np.asarray([0.0, 1.0, 0.0]), np.asarray([1.0, 0.0, 0.0]))
-    B = np.asarray([0.0, 0.0, 1.0])
+    particle = ChargedParticle(1.0, Q[0], X_0[0], V_0[0])
+    B = b_field
     analytic_times, analytic_positions = solve_B_field(particle, B, 4.0)
 
     x = positions[:, :, 0].flatten()
@@ -114,6 +116,13 @@ def single_particle_example():
     ax.set_zlabel('Z')
     ax.legend(loc='best')
     ax.set_title("Analytic and Numerical Particle Motion")
+    plt.show()
+
+    fig, axes = plt.subplots(3, figsize=(20, 10))
+    axes[0].plot(x)
+    axes[1].plot(y)
+    axes[2].plot(z)
+    fig.suptitle("Deviation of Numerical Solution from the Analytic")
     plt.show()
 
     fig, axes = plt.subplots(3, figsize=(20, 10))

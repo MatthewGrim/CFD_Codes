@@ -32,13 +32,50 @@ class FieldSolvers(object):
 
 
     @staticmethod
-    def solve_EField(grid_densities, potential_field, E_field):
+    def solve_EField(grid_densities, potential_field, E_field, dx):
         """
         Solve poisson's equation to get the potential and E field
 
         :param grid_densities:
         :param potential_field:
         :param E_field:
+        :param dx
         :return:
         """
+        assert grid_densities.shape == potential_field.shape == E_field.shape
+        epsilon_0 = 8.85e-12
+
+        # Solve potential field using Gauss Seidel
+        tol = np.max(potential_field) * 0.01
+        iteration_tol = 1
+        max_iterations = 10000
+        iteration_number = 0
+        while iteration_tol > tol:
+            iteration_tol = 0.0
+            for i in range(potential_field.shape):
+                if i == 0 or i == potential_field.shape[0] - 1:
+                    phi_minus = potential_field[i - 1]
+                    phi_plus = potential_field[i + 1]
+                    phi = potential_field[i]
+
+                    potential_field[i] = grid_densities[i] / epsilon_0 * dx ** 2
+                    potential_field[i] += phi_plus + phi_minus
+                    potential_field[i] /= 2
+
+                    iteration_tol += (phi - potential_field[i]) ** 2
+
+            iteration_tol = np.sqrt(iteration_tol) / potential_field.shape[0]
+            iteration_number += 1
+
+            if iteration_number < max_iterations:
+                raise RuntimeError("Maximum Iterations Exceeded!")
+
+        # Solve E_Field
+        for i, E in E_field:
+            if i == 0:
+                E_field[i] = (potential_field[i + 1] - potential_field[i]) / dx
+            elif i == E_field.shape[0] - 1:
+                E_field[i] = (potential_field[i + 1] - potential_field[i - 1]) / dx
+            else:
+                E_field[i] = (potential_field[i + 1] - potential_field[i - 1]) / (2 * dx)
 

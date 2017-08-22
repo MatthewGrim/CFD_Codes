@@ -9,7 +9,7 @@ the implementation of ES1
 
 class ParticlePushers(object):
     @staticmethod
-    def advance_time_step(E_field, particle_positions, particle_velocities, particle_charges, particle_masses, dt):
+    def advance_time_step(E_field, particle_positions, particle_velocities, particle_charges, particle_masses, dt, domain_length):
         """
         This function is used to advance particles over a single time step
 
@@ -20,6 +20,7 @@ class ParticlePushers(object):
         :param particle_masses: the mass of each particle species
         :param dt: the duration of the time step
         :param dx: the distance between adjacent cell centres
+        :param domain_length: the total length of the simulation domain
         :return:
         """
         # Calculate new velocities
@@ -27,6 +28,15 @@ class ParticlePushers(object):
 
         # Calculate new positions
         particle_positions[:] += particle_velocities * dt
+
+        # Move particle positions across periodic boundary
+        for i, pos in enumerate(particle_positions):
+            if pos < 0.0:
+                particle_positions[i] += domain_length
+
+            if pos > domain_length:
+                particle_positions[i] -= domain_length
+
 
     @staticmethod
     def initialise_velocities(particle_positions, particle_velocities, E_field, Q, particle_masses, dt):

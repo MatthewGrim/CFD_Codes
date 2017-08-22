@@ -58,7 +58,8 @@ class ES1Controller(object):
 
     def _evolve_timestep(self):
         # Construct interpolation function for E field across the domain
-        E_field_function = interp1d(self.cell_locations, self.E_field)
+        E_field_function = interp1d(self.cell_locations,
+                                    self.E_field)
 
         # Apply acceleration due to Efield and advance positions
         ParticlePushers.advance_time_step(E_field_function,
@@ -66,11 +67,15 @@ class ES1Controller(object):
                                           self.particle_velocities,
                                           self.particle_charges,
                                           self.particle_masses,
-                                          self.dt)
+                                          self.dt,
+                                          self.domain_length)
 
         # Calculate Charge Densities
-        FieldSolvers.get_charge_densities(self.charge_densities, self.particle_positions, self.particle_charges,
-                                          self.dx, self.domain_length)
+        FieldSolvers.get_charge_densities(self.charge_densities,
+                                          self.particle_positions,
+                                          self.particle_charges,
+                                          self.dx,
+                                          self.domain_length)
 
         # Calculate new EFields
         FieldSolvers.solve_EField()

@@ -6,10 +6,13 @@ This file contains the class used to evolve the particle motion in
 the implementation of ES1
 """
 
+import numpy as np
+from matplotlib import pyplot as plt
+
 
 class ParticlePushers(object):
     @staticmethod
-    def advance_time_step(E_field, particle_positions, particle_velocities, particle_charges, particle_masses, dt, domain_length):
+    def advance_time_step(E_field, particle_positions, particle_velocities, particle_charges, particle_masses, dt, dx, domain_length):
         """
         This function is used to advance particles over a single time step
 
@@ -26,8 +29,12 @@ class ParticlePushers(object):
         # Calculate new velocities
         particle_velocities[:] += particle_charges * E_field(particle_positions[:]) / particle_masses * dt
 
+        # Calculate particle movement
+        particle_displacement = particle_velocities * dt
+        assert np.all(particle_displacement < dx)
+
         # Calculate new positions
-        particle_positions[:] += particle_velocities * dt
+        particle_positions[:] += particle_displacement
 
         # Move particle positions across periodic boundary
         for i, pos in enumerate(particle_positions):

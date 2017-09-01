@@ -38,8 +38,8 @@ class ParticleInitialisers(object):
                 particle_positions[i] = i * particle_spacing
                 particle_velocities[i] = mean_velocity
         elif distribution_type is ParticleDistributionType.PERTURBATION:
-            perturbation_amplitude = kwargs.get("perturbation_amplitude")
-            perturbation_velocity = kwargs.get("perturbation_velocity")
+            perturbation_amplitude = kwargs.get("perturbation_amplitude", 0.01)
+            perturbation_velocity = kwargs.get("perturbation_velocity", 0.0)
             particle_spacing = domain_length / num_particles
             # Construct uniform base field
             for i, pos in enumerate(particle_positions):
@@ -49,6 +49,11 @@ class ParticleInitialisers(object):
             for i, pos in enumerate(particle_positions):
                 particle_velocities[i] += perturbation_velocity * np.cos(particle_positions[i])
                 particle_positions[i] += perturbation_amplitude * np.sin(particle_positions[i])
+
+                if particle_positions[i] < 0.0:
+                    particle_positions += domain_length
+                if particle_positions[i] > domain_length:
+                    particle_positions -= domain_length
         else:
             raise ValueError("Specified option is not implemented!")
 

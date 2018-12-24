@@ -5,6 +5,14 @@
 *CMakeCache*
 *CMakeFiles*
 *MakeFile
+*cmake_install*
+
+// DS_Store
+*DS_Store*
+
+// sublime
+*sublime-workspace*
+*sublime-project*
 
 // Ignore generated images
 *.png

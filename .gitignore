@@ -1,6 +1,11 @@
 // Ignore pycharm .idea
 .idea
 
+// CMake
+*CMakeCache*
+*CMakeFiles*
+*MakeFile
+
 // Ignore generated images
 *.png
 

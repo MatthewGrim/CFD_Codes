@@ -23,8 +23,8 @@ int main() {
 
   std::cout << "Initialising problem..." << std::endl;
   auto initialiser = std::make_shared<vof::DoubleMachInitialiser>();
-  initialiser->setResolution(0, 200);
-  initialiser->setResolution(1, 100);
+  initialiser->setResolution(0, 400);
+  initialiser->setResolution(1, 150);
   initialiser->setDimension(2);
 
   std::cout << "Running simulation..." << std::endl;

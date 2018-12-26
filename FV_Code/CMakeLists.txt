@@ -3,8 +3,14 @@ project(VOF)
 
 set(CMAKE_CXX_STANDARD 11)
 
-include_directories(src/ /usr/local/Cellar/vtk/8.1.2/include/vtk-8.1 /usr/local/include)
-link_directories(/usr/local/lib /usr/local/Cellar/vtk/8.1.2/lib)
+# Link to GTEST
+include_directories(src/ /usr/local/include)
+link_directories(/usr/local/lib)
+
+# Link to VTK
+set(VTK_DIR "/usr/local/Cellar/vtk/8.1.2")
+find_package(VTK REQUIRED)
+include(${VTK_USE_FILE})
 
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 foreach(dir ${dirs})
@@ -73,4 +79,4 @@ set(SOURCE_FILES
         src/testing/vof/simulation/DoubleMachSimulationTest.cpp src/vof/statistics/ScopedTimer.cpp src/vof/statistics/ScopedTimer.h)
 
 add_executable(VOF ${SOURCE_FILES})
-target_link_libraries(VOF gtest)
+target_link_libraries(VOF gtest ${VTK_LIBRARIES})

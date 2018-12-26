@@ -5,18 +5,13 @@
 
 #include <vof/io/VTKWriter.h>
 
-#include <vtkXMLStructuredGridWriter.h>
 #include <vtkXMLUnstructuredGridWriter.h>
-#include <vtkStructuredGrid.h>
 #include <vtkUnstructuredGrid.h>
-#include <vtkDataSet.h>
-#include <vtkPointData.h>
-#include <vtkTetra.h>
-#include <vtkCellData.h>
-#include <vtkCellArray.h>
-#include <vtkDoubleArray.h>
+#include <vtkPoints.h>
 #include <vtkSmartPointer.h>
-
+#include <vtkHexahedron.h>
+#include <vtkDoubleArray.h>
+#include <vtkCellData.h>
 
 namespace vof {
     void
@@ -36,13 +31,14 @@ namespace vof {
         const auto velocities = grid->velocities();
         
         // Set VTK writer classes
-        vtkSmartPointer<vtkXMLStructuredGridWriter> vtkWriter = vtkXMLStructuredGridWriter::New();
-        vtkSmartPointer<vtkStructuredGrid> vtkGrid = vtkStructuredGrid::New();
-        vtkGrid->SetDimensions(cellResolution[0], cellResolution[1], cellResolution[2]);
+        vtkSmartPointer<vtkXMLUnstructuredGridWriter> vtkWriter = vtkXMLUnstructuredGridWriter::New();
+        vtkSmartPointer<vtkUnstructuredGrid> vtkGrid = vtkUnstructuredGrid::New();
         
+        // Define vtk points representing nodes of cells
         vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-        points->Allocate(cellResolution[0] * cellResolution[1] * cellResolution[2]);
+        points->SetNumberOfPoints((cellResolution[0] + 1) * (cellResolution[1] + 1) * (cellResolution[2] + 1));
         
+        // define vtk double arrays representing cell data
         vtkSmartPointer<vtkDoubleArray> rhoArray = vtkDoubleArray::New();
         rhoArray->SetNumberOfComponents(1);
         rhoArray->SetName("Density");
@@ -56,16 +52,58 @@ namespace vof {
         velArray->SetNumberOfComponents(3);
         velArray->SetName("Velocity");
         
-        // Add data to VTK Output
+        // Set time stamp
+        vtkSmartPointer<vtkDoubleArray> timeArray = vtkDoubleArray::New();
+        timeArray->SetName("TIME");
+        timeArray->SetNumberOfTuples(1);
+        timeArray->SetTuple1(0, time);
+        vtkGrid->GetFieldData()->AddArray(timeArray);
+
+        // Add point data to VTK Output
+        int pointId = 0;
         double x, y, z;
+        for (int k = 0; k < cellResolution[2] + 1; ++k) {
+            for (int j = 0; j < cellResolution[1] + 1; ++j) {
+                for (int i = 0; i < cellResolution[0] + 1; ++i) {
+                    x = i * cellDimensions[0];
+                    y = j * cellDimensions[1];
+                    z = k * cellDimensions[2];
+                    
+                    points->SetPoint(pointId, x, y, z);
+                    ++pointId;
+                }
+            }
+        }
+
+        // Define cells and cell data
+        vtkSmartPointer<vtkHexahedron> cell = vtkHexahedron::New();
         for (int k = 0; k < cellResolution[2]; ++k) {
             for (int j = 0; j < cellResolution[1]; ++j) {
                 for (int i = 0; i < cellResolution[0]; ++i) {
-                    x = (i + 0.5) * cellDimensions[0];
-                    y = (j + 0.5) * cellDimensions[1];
-                    z = (k + 0.5) * cellDimensions[2];
+                    // Get node values for connectivity
+                    int node1 = k * (cellResolution[1] + 1) * (cellResolution[0] + 1) + j * (cellResolution[0] + 1) + i;
+                    int node2 = (k + 1) * (cellResolution[1] + 1) * (cellResolution[0] + 1) + j * (cellResolution[0] + 1) + i;
+                    int node3 = (k + 1) * (cellResolution[1] + 1) * (cellResolution[0] + 1) + (j + 1) * (cellResolution[0] + 1) + i;
+                    int node4 = k * (cellResolution[1] + 1) * (cellResolution[0] + 1) + (j + 1) * (cellResolution[0] + 1) + i;
+                    int node5 = k * (cellResolution[1] + 1) * (cellResolution[0] + 1) + j * (cellResolution[0] + 1) + i + 1;
+                    int node6 = (k + 1) * (cellResolution[1] + 1) * (cellResolution[0] + 1) + j * (cellResolution[0] + 1) + i + 1;
+                    int node7 = (k + 1) * (cellResolution[1] + 1) * (cellResolution[0] + 1) + (j + 1) * (cellResolution[0] + 1) + i + 1;
+                    int node8 = k * (cellResolution[1] + 1) * (cellResolution[0] + 1) + (j + 1) * (cellResolution[0] + 1) + i + 1;
                     
-                    points->InsertNextPoint(x, y, z);
+                    // Set nodes of cell                    
+                    cell->GetPointIds()->SetId(0, node1);
+                    cell->GetPointIds()->SetId(1, node2);
+                    cell->GetPointIds()->SetId(2, node3);
+                    cell->GetPointIds()->SetId(3, node4);
+                    cell->GetPointIds()->SetId(4, node5);
+                    cell->GetPointIds()->SetId(5, node6);
+                    cell->GetPointIds()->SetId(6, node7);
+                    cell->GetPointIds()->SetId(7, node8);
+
+                    // Add cell to vtk
+                    vtkGrid->InsertNextCell(cell->GetCellType(), cell->GetPointIds());
+                    
+                    // Add cell data to arrays
                     rhoArray->InsertNextTuple(&densities(i, j, k));
                     pArray->InsertNextTuple(&pressures(i, j, k));
                     velArray->InsertNextTuple3(velocities(i, j, k)[0],
@@ -75,17 +113,17 @@ namespace vof {
                 }
             }
         }
-        
+
         // Add to data to grid
         vtkGrid->SetPoints(points);
-        vtkGrid->GetPointData()->AddArray(rhoArray);
-        vtkGrid->GetPointData()->AddArray(pArray);
-        vtkGrid->GetPointData()->AddArray(velArray);
-        vtkGrid->GetPointData()->AddArray(eArray);
-        
+        vtkGrid->GetCellData()->AddArray(rhoArray);
+        vtkGrid->GetCellData()->AddArray(pArray);
+        vtkGrid->GetCellData()->AddArray(velArray);
+        vtkGrid->GetCellData()->AddArray(eArray);
+
         // Write to file
         std::stringstream ss;
-        ss << "ts" << timeStep << ".vts";
+        ss << "ts" << timeStep << ".vtu";
         vtkWriter->SetInputData(vtkGrid);
         vtkWriter->SetFileName(ss.str().c_str());
         vtkWriter->SetDataModeToAscii();

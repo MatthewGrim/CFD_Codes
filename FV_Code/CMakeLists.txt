@@ -17,8 +17,6 @@ foreach(dir ${dirs})
   message(STATUS "dir='${dir}'")
 endforeach()
 
-file(GLOB_RECURSE SOURCE_FILES "src" "*.h" "*.cpp")
-
 set(SOURCE_FILES
         src/testing/vof/algo/riemann_solvers/ExactRiemannSolver_unittest.cpp
         src/testing/vof/data/geom/Point_unittest.cpp

@@ -6,7 +6,7 @@ This file contains a simulation class for running 1D linear advection equation s
 """
 
 import numpy as np
-from CFD_Projects.advection.flux_calculator import AdvectionFluxCalculator
+from CFD_Projects.advection.flux_calculator import AdvectionFluxCalculator, WENOFluxCalculator
 
 
 class LinearAdvectionSim(object):
@@ -67,8 +67,13 @@ class LinearAdvectionSim(object):
         while t < self.final_time:
             dt = self.calculate_time_step()
             dt = dt if t + dt < self.final_time else self.final_time - t
-            fluxes = self.flux_calculator.evaluate_fluxes(self.u, self.dx, dt, a=self.a)
-            self.update_states(fluxes, dt)
+
+            if not isinstance(self.flux_calculator, WENOFluxCalculator):
+                fluxes = self.flux_calculator.evaluate_fluxes(self.u, self.dx, dt, a=self.a)
+                self.update_states(fluxes, dt)
+            else:
+                # This section needs to implement an Upwind type scheme, with Runge Kutta state updates
+                raise NotImplementedError()
 
             t += dt
             ts += 1

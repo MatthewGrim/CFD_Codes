@@ -66,6 +66,14 @@ public:
         mDim = dim;
     }
 
+    void
+    setOutputResults(
+        bool outputResults
+        ) override
+    {
+        mOutputResults = outputResults;
+    }
+
     /**
      * Accessors for simulation attributes
      */
@@ -81,6 +89,9 @@ public:
     double
     finalTime() const override { return mFinalTime; }
 
+    bool
+    outputResults() const override { return mOutputResults; }
+
     std::array<std::shared_ptr<IBoundaryCondition>, 6>
     boundaryConditions() const override { return mBoundaryConditions; }
 
@@ -88,6 +99,7 @@ protected:
     int mDim;
     std::array<std::shared_ptr<IBoundaryCondition>, 6> mBoundaryConditions;
     double mFinalTime;
+    bool mOutputResults;
     std::array<int, 3> mSimResolution;
     std::array<double, 3> mSimDimensions;
 };

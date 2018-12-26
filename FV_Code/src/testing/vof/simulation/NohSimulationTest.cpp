@@ -20,6 +20,7 @@ namespace vof {
 
     TEST_F(NohSimulationTest, Noh) {
         auto initialiser = std::make_shared<NohInitialiser>(1, 0);
+        initialiser->setOutputResults(false);
 
         runAndCompareSim(initialiser, "NohArchive", 45);
     }

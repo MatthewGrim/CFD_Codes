@@ -34,7 +34,8 @@ namespace vof {
 		const std::shared_ptr<IBaseInitialiser> initialiser
 		) :
 		mDim(initialiser->simDimension()),
-		mFinalTime(initialiser->finalTime())
+		mFinalTime(initialiser->finalTime()),
+        mOutputResults(initialiser->outputResults())
 	{
 		const auto& simBoundaryConditions = initialiser->boundaryConditions();
 		for (size_t i = 0; i < mBoundaryConditions.size(); ++i) {
@@ -79,7 +80,7 @@ namespace vof {
             // Initial output
             double time = 0;
             int ts = 0;
-            {
+            if (mOutputResults) {
                 auto fileIOTimer = ScopedTimer("VTKWriter");
                 VTKWriter::writeStructuredGridToFile(mGrid, time, ts);
             }
@@ -95,7 +96,7 @@ namespace vof {
                 ++ts;
                 std::cout << time << std::endl;
                 
-                if (time > nextOutputTime) {
+                if (time > nextOutputTime && mOutputResults) {
                     nextOutputTime += outputTime;
                     std::cout << "Outputing" << std::endl;
                     auto fileIOTimer = ScopedTimer("VTKWriter");
@@ -104,7 +105,7 @@ namespace vof {
             }
             
             // Final output
-            {
+            if (mOutputResults) {
                 auto fileIOTimer = ScopedTimer("VTKWriter");
                 VTKWriter::writeStructuredGridToFile(mGrid, time, ts);
             }

@@ -20,6 +20,7 @@ class DoubleMachSimulationTest :
 
 TEST_F(DoubleMachSimulationTest, DISABLED_DoubleMach) {
     auto initialiser = std::make_shared<DoubleMachInitialiser>();
+    initialiser->setOutputResults(false);
 
     runAndCompareSim(initialiser, "DoubleMachArchive", 60000);
 }

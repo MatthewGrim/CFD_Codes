@@ -72,6 +72,7 @@
 	private:
 		int mDim;
 		double mFinalTime;
+		bool mOutputResults;
 		std::shared_ptr<IBaseInitialiser> mInitialiser;
 		std::shared_ptr<EulerianGrid> mGrid;
 		std::vector<std::shared_ptr<IEquationOfState> > mEos;

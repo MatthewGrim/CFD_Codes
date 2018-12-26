@@ -19,6 +19,7 @@ BaseInitialiser(
     std::array<double, 3> dimensions
     ) :
     mDim(dim),
+    mOutputResults(true),
     mSimResolution(resolutions),
     mSimDimensions(dimensions) {}
 

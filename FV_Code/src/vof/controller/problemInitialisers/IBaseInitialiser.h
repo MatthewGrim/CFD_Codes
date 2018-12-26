@@ -67,6 +67,11 @@ public:
 		int dim
 		) = 0;
 
+	virtual void
+	setOutputResults(
+		bool setOutputResults
+		) = 0;
+
 	/**
 	 * Accessors for simulation attributes
 	 */
@@ -81,6 +86,9 @@ public:
 
     virtual double
 	finalTime() const = 0;
+
+	virtual bool
+	outputResults() const = 0;
 
     virtual std::array<std::shared_ptr<IBoundaryCondition>, 6>
 	boundaryConditions() const = 0;

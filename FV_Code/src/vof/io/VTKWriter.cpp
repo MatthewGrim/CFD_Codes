@@ -126,7 +126,7 @@ namespace vof {
         ss << "ts" << timeStep << ".vtu";
         vtkWriter->SetInputData(vtkGrid);
         vtkWriter->SetFileName(ss.str().c_str());
-        vtkWriter->SetDataModeToAscii();
+        vtkWriter->SetDataModeToBinary();
         vtkWriter->Write();
     }
 }

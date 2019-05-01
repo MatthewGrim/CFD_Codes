@@ -76,7 +76,7 @@ class ShockTube1D(BaseSimulation1D):
         self.is_initialised = True
 
 
-def example():
+def example(plot_sims=True, profile_sims=False):
     """
     Runs the problems from Toro Chapter 6 to validate this simulation
     """
@@ -98,23 +98,25 @@ def example():
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
         
         # Set up plot
-        fig, ax = plt.subplots(2, 3, figsize=(20, 10))
-        fig.suptitle("Sod Test: {}".format(i + 1))
-        ax[0, 0].set_title("Density")
-        ax[0, 1].set_title("Velocity")
-        ax[0, 2].set_title("Pressure")
-        ax[1, 0].set_title("Specific Internal Energy")
-        ax[1, 1].set_title("Specific Kinetic Energy")
-        ax[1, 2].set_title("Mass Ratios")
-        for axis_columns in ax:
-            for axis in axis_columns:
-                print(axis)
-                axis.set_xlim([0.0, 1.0])
-        ax[1, 2].set_ylim([0.0, 1.05])
+        if plot_sims:
+            fig, ax = plt.subplots(2, 3, figsize=(20, 10))
+            fig.suptitle("Sod Test: {}".format(i + 1))
+            ax[0, 0].set_title("Density")
+            ax[0, 1].set_title("Velocity")
+            ax[0, 2].set_title("Pressure")
+            ax[1, 0].set_title("Specific Internal Energy")
+            ax[1, 1].set_title("Specific Kinetic Energy")
+            ax[1, 2].set_title("Mass Ratios")
+            for axis_columns in ax:
+                for axis in axis_columns:
+                    print(axis)
+                    axis.set_xlim([0.0, 1.0])
+            ax[1, 2].set_ylim([0.0, 1.05])
 
         # Generate profiler
-        profile = cProfile.Profile()
-        profile.enable()
+        if profile_sims:
+            profile = cProfile.Profile()
+            profile.enable()
 
         # Run simulations
         for flux_calculator in flux_calculators:
@@ -124,30 +126,34 @@ def example():
             shock_tube_sim = Controller1D(shock_tube)
             (_, x, densities, pressures, velocities, internal_energies, kinetic_energies, mass_ratios) = shock_tube_sim.run_sim()
 
-            ax[0, 0].scatter(x, densities, c=flux_calculator[1])
-            ax[0, 1].scatter(x, velocities, c=flux_calculator[1])
-            ax[0, 2].scatter(x, pressures, c=flux_calculator[1])
-            ax[1, 0].scatter(x, internal_energies, c=flux_calculator[1])
-            ax[1, 1].scatter(x, kinetic_energies / densities, c=flux_calculator[1])
-            ax[1, 2].scatter(x, mass_ratios, c=flux_calculator[1])
+            if plot_sims:
+                ax[0, 0].scatter(x, densities, c=flux_calculator[1])
+                ax[0, 1].scatter(x, velocities, c=flux_calculator[1])
+                ax[0, 2].scatter(x, pressures, c=flux_calculator[1])
+                ax[1, 0].scatter(x, internal_energies, c=flux_calculator[1])
+                ax[1, 1].scatter(x, kinetic_energies / densities, c=flux_calculator[1])
+                ax[1, 2].scatter(x, mass_ratios, c=flux_calculator[1])
         
         # Output stats
-        profile.disable()
-        profile.create_stats()
-        with open("sod{}_profile.txt".format(i + 1), 'w') as fp:
-            stats = pstats.Stats(profile, stream=fp)
-            stats.sort_stats('cumtime')  # cumtime, ncalls, percall
-            stats.print_stats()
+        if profile_sims:
+            profile.disable()
+            profile.create_stats()
+            with open("sod{}_profile.txt".format(i + 1), 'w') as fp:
+                stats = pstats.Stats(profile, stream=fp)
+                stats.sort_stats('cumtime')  # cumtime, ncalls, percall
+                stats.print_stats()
             
         # Get analytic solution
         sod_test = AnalyticShockTube(left_state, right_state, membrane_location[i], 1000)
         x_sol, rho_sol, u_sol, p_sol, e_int_sol, e_kin_sol = sod_test.get_solution(end_times[i], membrane_location[i])
-        ax[0, 0].plot(x_sol, rho_sol)
-        ax[0, 1].plot(x_sol, u_sol)
-        ax[0, 2].plot(x_sol, p_sol)
-        ax[1, 0].plot(x_sol, e_int_sol)
-        ax[1, 1].plot(x_sol, e_kin_sol)
-        plt.show()
+        
+        if plot_sims:
+            ax[0, 0].plot(x_sol, rho_sol)
+            ax[0, 1].plot(x_sol, u_sol)
+            ax[0, 2].plot(x_sol, p_sol)
+            ax[1, 0].plot(x_sol, e_int_sol)
+            ax[1, 1].plot(x_sol, e_kin_sol)
+            plt.show()
 
 
 if __name__ == '__main__':

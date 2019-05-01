@@ -426,18 +426,18 @@ def test_iterative_scheme():
     u_right = [0.0, 2.0, 0.0, 0.0, -6.19633]
 
     solver = IterativeRiemannSolver(1.4)
-    print '*' * 50
+    print('*' * 50)
     for i in range(0, 5):
-        print "Riemann Test: " + str(i + 1)
+        print("Riemann Test: " + str(i + 1))
 
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 
         p_star, u_star = solver.get_star_states(left_state, right_state)
 
-        print "Converged Star Pressure: " + str(p_star)
-        print "Converged Star Velocity: " + str(u_star)
-        print '*' * 50
+        print("Converged Star Pressure: " + str(p_star))
+        print("Converged Star Velocity: " + str(u_star))
+        print('*' * 50)
 
 
 if __name__ == '__main__':

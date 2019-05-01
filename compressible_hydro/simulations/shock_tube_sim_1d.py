@@ -90,60 +90,47 @@ def example():
     membrane_location = [0.3, 0.5, 0.5, 0.4, 0.8]
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
-    run_lax_wendroff = False
-    run_god = True
-    run_rc = False
-    run_hllc = False
-    run_muscl = False
+    # Options - (GODUNOV, "g"), (RANDOM_CHOICE, "r") (HLLC, "k"), (MUSCL, "c"), (LAX_WENDROFF, "b")
+    flux_calculators = [(FluxCalculator1D.GODUNOV, "g")]
     for i in range(0, 5):
+        # Get initial conditions for shock tube
+        left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
+        right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
+        
+        # Set up plot
+        fig, ax = plt.subplots(2, 3, figsize=(20, 10))
+        fig.suptitle("Sod Test: {}".format(i + 1))
+        ax[0, 0].set_title("Density")
+        ax[0, 1].set_title("Velocity")
+        ax[0, 2].set_title("Pressure")
+        ax[1, 0].set_title("Specific Internal Energy")
+        ax[1, 1].set_title("Specific Kinetic Energy")
+        ax[1, 2].set_title("Mass Ratios")
+        for axis_columns in ax:
+            for axis in axis_columns:
+                print(axis)
+                axis.set_xlim([0.0, 1.0])
+        ax[1, 2].set_ylim([0.0, 1.05])
+
         # Generate profiler
         profile = cProfile.Profile()
         profile.enable()
 
-        # Get initial conditions for shock tube
-        left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
-        right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
-
         # Run simulations
-        if run_lax_wendroff:
-            shock_tube_lax_wendroff = ShockTube1D(left_state, right_state, membrane_location[i],
-                                                  final_time=end_times[i], CFL=0.45,
-                                                  flux_calculator=FluxCalculator1D.LAX_WENDROFF)
-            godunov_sim = Controller1D(shock_tube_lax_wendroff)
-            (times_lax_wendroff, x_lax_wendroff, densities_lax_wendroff, pressures_lax_wendroff, velocities_lax_wendroff, internal_energies_lax_wendroff, kinetic_energies_lax_wendroff, mass_ratios_lax_wendroff) = godunov_sim.run_sim()
+        for flux_calculator in flux_calculators:
+            shock_tube = ShockTube1D(left_state, right_state, membrane_location[i],
+                                     final_time=end_times[i], CFL=0.45,
+                                     flux_calculator=flux_calculator[0])
+            shock_tube_sim = Controller1D(shock_tube)
+            (_, x, densities, pressures, velocities, internal_energies, kinetic_energies, mass_ratios) = shock_tube_sim.run_sim()
 
-        if run_god:
-            shock_tube_god = ShockTube1D(left_state, right_state, membrane_location[i],
-                                         final_time=end_times[i], CFL=0.45,
-                                         flux_calculator=FluxCalculator1D.GODUNOV)
-            godunov_sim = Controller1D(shock_tube_god)
-            (times_god, x_god, densities_god, pressures_god, velocities_god, internal_energies_god, kinetic_energies_god, mass_ratios_god) = godunov_sim.run_sim()
-
-        if run_rc:
-            shock_tube_rc = ShockTube1D(left_state, right_state, membrane_location[i],
-                                        final_time=end_times[i], CFL=0.45,
-                                        flux_calculator=FluxCalculator1D.RANDOM_CHOICE)
-            random_choice_sim = Controller1D(shock_tube_rc)
-            (times_rc, x_rc, densities_rc, pressures_rc, velocities_rc, internal_energies_rc, kinetic_energies_rc,  mass_ratios_rc) = random_choice_sim.run_sim()
-
-        if run_hllc:
-            shock_tube_hllc = ShockTube1D(left_state, right_state, membrane_location[i],
-                                          final_time=end_times[i], CFL=0.45,
-                                          flux_calculator=FluxCalculator1D.HLLC)
-            hllc_sim = Controller1D(shock_tube_hllc)
-            (times_hllc, x_hllc, densities_hllc, pressures_hllc, velocities_hllc, internal_energies_hllc, kinetic_energies_hllc,  mass_ratios_hllc) = hllc_sim.run_sim()
-
-        if run_muscl:
-            shock_tube_muscl = ShockTube1D(left_state, right_state, membrane_location[i],
-                                          final_time=end_times[i], CFL=0.45,
-                                          flux_calculator=FluxCalculator1D.MUSCL)
-            muscl_sim = Controller1D(shock_tube_muscl)
-            (times_muscl, x_muscl, densities_muscl, pressures_muscl, velocities_muscl, internal_energies_muscl, kinetic_energies_muscl, mass_ratios_muscl) = muscl_sim.run_sim()
-
-        # Get analytic solution
-        sod_test = AnalyticShockTube(left_state, right_state, membrane_location[i], 1000)
-        x_sol, rho_sol, u_sol, p_sol, e_int_sol, e_kin_sol = sod_test.get_solution(end_times[i], membrane_location[i])
-
+            ax[0, 0].scatter(x, densities, c=flux_calculator[1])
+            ax[0, 1].scatter(x, velocities, c=flux_calculator[1])
+            ax[0, 2].scatter(x, pressures, c=flux_calculator[1])
+            ax[1, 0].scatter(x, internal_energies, c=flux_calculator[1])
+            ax[1, 1].scatter(x, kinetic_energies / densities, c=flux_calculator[1])
+            ax[1, 2].scatter(x, mass_ratios, c=flux_calculator[1])
+        
         # Output stats
         profile.disable()
         profile.create_stats()
@@ -151,97 +138,15 @@ def example():
             stats = pstats.Stats(profile, stream=fp)
             stats.sort_stats('cumtime')  # cumtime, ncalls, percall
             stats.print_stats()
-
-        # Plot state results
-        title = "Sod Test: {}".format(i + 1)
-        num_plts_x = 2
-        num_plts_y = 3
-        plt.figure(figsize=(20, 10))
-        plt.suptitle(title)
-        plt.subplot(num_plts_x, num_plts_y, 1)
-        plt.title("Density")
-        plt.plot(x_sol, rho_sol)
-        if run_lax_wendroff:
-            plt.scatter(x_lax_wendroff, densities_lax_wendroff, c='b')
-        if run_god:
-            plt.scatter(x_god, densities_god, c='g')
-        if run_rc:
-            plt.scatter(x_rc, densities_rc, c='r')
-        if run_hllc:
-            plt.scatter(x_hllc, densities_hllc, c='k')
-        if run_muscl:
-            plt.scatter(x_muscl, densities_muscl, c='c')
-        plt.xlim([0.0, 1.0])
-        plt.subplot(num_plts_x, num_plts_y, 2)
-        plt.title("Velocity")
-        plt.plot(x_sol, u_sol)
-        if run_lax_wendroff:
-            plt.scatter(x_lax_wendroff, velocities_lax_wendroff, c='b')
-        if run_god:
-            plt.scatter(x_god, velocities_god, c='g')
-        if run_rc:
-            plt.scatter(x_rc, velocities_rc, c='r')
-        if run_hllc:
-            plt.scatter(x_hllc, velocities_hllc, c='k')
-        if run_muscl:
-            plt.scatter(x_muscl, velocities_muscl, c='c')
-        plt.xlim([0.0, 1.0])
-        plt.subplot(num_plts_x, num_plts_y, 3)
-        plt.title("Pressure")
-        plt.plot(x_sol, p_sol)
-        if run_lax_wendroff:
-            plt.scatter(x_lax_wendroff, pressures_lax_wendroff, c='b')
-        if run_god:
-            plt.scatter(x_god, pressures_god, c='g')
-        if run_rc:
-            plt.scatter(x_rc, pressures_rc, c='r')
-        if run_hllc:
-            plt.scatter(x_hllc, pressures_hllc, c='k')
-        if run_muscl:
-            plt.scatter(x_muscl, pressures_muscl, c='c')
-        plt.xlim([0.0, 1.0])
-        plt.subplot(num_plts_x, num_plts_y, 4)
-        plt.title("Specific Internal Energy")
-        plt.plot(x_sol, e_int_sol)
-        if run_lax_wendroff:
-            plt.scatter(x_lax_wendroff, internal_energies_lax_wendroff, c='b')
-        if run_god:
-            plt.scatter(x_god, internal_energies_god, c='g')
-        if run_rc:
-            plt.scatter(x_rc, internal_energies_rc, c='r')
-        if run_hllc:
-            plt.scatter(x_hllc, internal_energies_hllc, c='k')
-        if run_muscl:
-            plt.scatter(x_muscl, internal_energies_muscl, c='c')
-        plt.xlim([0.0, 1.0])
-        plt.subplot(num_plts_x, num_plts_y, 5)
-        plt.title("Specific Kinetic Energy")
-        plt.plot(x_sol, e_kin_sol)
-        if run_lax_wendroff:
-            plt.scatter(x_lax_wendroff, kinetic_energies_lax_wendroff, c='b')
-        if run_god:
-            plt.scatter(x_god, kinetic_energies_god / densities_god, c='g')
-        if run_rc:
-            plt.scatter(x_rc, kinetic_energies_rc / densities_rc, c='r')
-        if run_hllc:
-            plt.scatter(x_hllc, kinetic_energies_hllc / densities_hllc, c='k')
-        if run_muscl:
-            plt.scatter(x_muscl, kinetic_energies_muscl / densities_muscl, c='c')
-        plt.xlim([0.0, 1.0])
-        plt.subplot(num_plts_x, num_plts_y, 6)
-        plt.title("Mass Ratios")
-        if run_lax_wendroff:
-            plt.scatter(x_lax_wendroff, mass_ratios_lax_wendroff, c='b')
-        if run_god:
-            plt.plot(x_god, mass_ratios_god, c='g')
-        if run_rc:
-            plt.plot(x_rc, mass_ratios_rc, c='r')
-        if run_hllc:
-            plt.plot(x_hllc, mass_ratios_hllc, c='k')
-        if run_muscl:
-            plt.plot(x_muscl, mass_ratios_muscl, c='c')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
+            
+        # Get analytic solution
+        sod_test = AnalyticShockTube(left_state, right_state, membrane_location[i], 1000)
+        x_sol, rho_sol, u_sol, p_sol, e_int_sol, e_kin_sol = sod_test.get_solution(end_times[i], membrane_location[i])
+        ax[0, 0].plot(x_sol, rho_sol)
+        ax[0, 1].plot(x_sol, u_sol)
+        ax[0, 2].plot(x_sol, p_sol)
+        ax[1, 0].plot(x_sol, e_int_sol)
+        ax[1, 1].plot(x_sol, e_kin_sol)
         plt.show()
 
 

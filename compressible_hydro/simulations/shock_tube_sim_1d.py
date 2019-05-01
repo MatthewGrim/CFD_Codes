@@ -9,13 +9,15 @@ this file should replicate the results from Toro - Chapter 6
 import numpy as np
 from matplotlib import pyplot as plt
 
+import cProfile, pstats
+
 from CFD_Projects.compressible_hydro.boundary_conditions.boundary_condition import BoundaryCondition1D
 from CFD_Projects.compressible_hydro.boundary_conditions.boundary_condition import BoundaryConditionND
 from CFD_Projects.compressible_hydro.eos.thermodynamic_state import ThermodynamicState1D
 from CFD_Projects.compressible_hydro.flux_calculator.flux_calculator import FluxCalculator1D
 from CFD_Projects.compressible_hydro.simulations.analytic_shock_tube import AnalyticShockTube
 from CFD_Projects.compressible_hydro.simulations.base_simulation import BaseSimulation1D
-from compressible_hydro.controller.controller_1d import Controller1D
+from CFD_Projects.compressible_hydro.controller.controller_1d import Controller1D
 
 
 class ShockTube1D(BaseSimulation1D):
@@ -88,15 +90,21 @@ def example():
     membrane_location = [0.3, 0.5, 0.5, 0.4, 0.8]
     end_times = [0.25, 0.15, 0.012, 0.035, 0.012]
 
-    run_lax_wendroff = True
-    run_god = False
+    run_lax_wendroff = False
+    run_god = True
     run_rc = False
     run_hllc = False
     run_muscl = False
     for i in range(0, 5):
+        # Generate profiler
+        profile = cProfile.Profile()
+        profile.enable()
+
+        # Get initial conditions for shock tube
         left_state = ThermodynamicState1D(p_left[i], rho_left[i], u_left[i], gamma)
         right_state = ThermodynamicState1D(p_right[i], rho_right[i], u_right[i], gamma)
 
+        # Run simulations
         if run_lax_wendroff:
             shock_tube_lax_wendroff = ShockTube1D(left_state, right_state, membrane_location[i],
                                                   final_time=end_times[i], CFL=0.45,
@@ -135,6 +143,14 @@ def example():
         # Get analytic solution
         sod_test = AnalyticShockTube(left_state, right_state, membrane_location[i], 1000)
         x_sol, rho_sol, u_sol, p_sol, e_int_sol, e_kin_sol = sod_test.get_solution(end_times[i], membrane_location[i])
+
+        # Output stats
+        profile.disable()
+        profile.create_stats()
+        with open("sod{}_profile.txt".format(i + 1), 'w') as fp:
+            stats = pstats.Stats(profile, stream=fp)
+            stats.sort_stats('cumtime')  # cumtime, ncalls, percall
+            stats.print_stats()
 
         # Plot state results
         title = "Sod Test: {}".format(i + 1)
